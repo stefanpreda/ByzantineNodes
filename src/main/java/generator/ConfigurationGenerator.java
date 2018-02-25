@@ -180,28 +180,24 @@ public class ConfigurationGenerator {
             zoneElement.appendChild(hostElement);
         }
 
-        //Generate links
-        for (int i = 0; i < linkCount; i++) {
-
-            //Create tags <link id="" bandwidth="" latency=""></link>
-            Element linkElement = doc.createElement("link");
-            Attr linkAttr = doc.createAttribute("id");
-            linkAttr.setValue("link_" + i);
-            linkElement.setAttributeNode(linkAttr);
-            linkAttr = doc.createAttribute("bandwidth");
-            linkAttr.setValue(LINK_BANDWIDTH);
-            linkElement.setAttributeNode(linkAttr);
-            linkAttr = doc.createAttribute("latency");
-            linkAttr.setValue(LINK_LATENCY);
-            linkElement.setAttributeNode(linkAttr);
-
-            //Append link to zone
-            zoneElement.appendChild(linkElement);
-        }
-
-        //Generate loopback link
+        //Create tags <link id="" bandwidth="" latency=""></link>
         Element linkElement = doc.createElement("link");
         Attr linkAttr = doc.createAttribute("id");
+        linkAttr.setValue("standard_link");
+        linkElement.setAttributeNode(linkAttr);
+        linkAttr = doc.createAttribute("bandwidth");
+        linkAttr.setValue(LINK_BANDWIDTH);
+        linkElement.setAttributeNode(linkAttr);
+        linkAttr = doc.createAttribute("latency");
+        linkAttr.setValue(LINK_LATENCY);
+        linkElement.setAttributeNode(linkAttr);
+
+        //Append link to zone
+        zoneElement.appendChild(linkElement);
+
+        //Generate loopback link
+        linkElement = doc.createElement("link");
+        linkAttr = doc.createAttribute("id");
         linkAttr.setValue("loopback");
         linkElement.setAttributeNode(linkAttr);
         linkAttr = doc.createAttribute("bandwidth");
@@ -246,7 +242,6 @@ public class ConfigurationGenerator {
             for (int j = 0; j < connLevel; j++) {
 
                 int destNodeID = (i + j + 1) % nodeCount;
-                int linkID = i * connLevel + j;
 
                 //Create tags <route src="" dst=""></route>
                 Element routeElement = doc.createElement("route");
@@ -260,7 +255,7 @@ public class ConfigurationGenerator {
                 //Create tags <link_ctn id=""></link_ctn>
                 Element linkCtnElement = doc.createElement("link_ctn");
                 Attr linkCtnAttr = doc.createAttribute("id");
-                linkCtnAttr.setValue("link_" + linkID);
+                linkCtnAttr.setValue("standard_link");
                 linkCtnElement.setAttributeNode(linkCtnAttr);
 
                 //Append link_ctn to route
