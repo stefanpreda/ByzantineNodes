@@ -2,3 +2,4 @@ generated
 .gradle
 .idea
 build
+*.log

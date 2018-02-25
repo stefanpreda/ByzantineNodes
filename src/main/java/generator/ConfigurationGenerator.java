@@ -7,6 +7,7 @@ import org.w3c.dom.Element;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -18,10 +19,12 @@ public class ConfigurationGenerator {
 
     private DocumentBuilder docBuilder = null;
     private Transformer transformer = null;
-    private static final String FOLDER_NAME = "generated";
-    private static final String ROLES_FILE_NAME = "byzantine.xml";
-    private static final String TOPOLOGY_FILE_NAME = "topology.xml";
+
     private static final String PLATFORM_VERSION = "4.1";
+
+    public static final String FOLDER_NAME = "generated";
+    public static final String ROLES_FILE_NAME = "byzantine.xml";
+    public static final String TOPOLOGY_FILE_NAME = "topology.xml";
 
     private static final String HOST_SPEED = "100.00Mf";
     private static final String LINK_BANDWIDTH = "100.00MBps";
@@ -38,6 +41,7 @@ public class ConfigurationGenerator {
 
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
             transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd");
 
         } catch (ParserConfigurationException e) {
             System.err.println(e.getLocalizedMessage());
@@ -50,6 +54,7 @@ public class ConfigurationGenerator {
 
     public void generateNodeRoles(int countLegitNodes, int countByzantineNodes) {
         Document doc = docBuilder.newDocument();
+        doc.setXmlStandalone(true);
 
         // Create tags <platform version=""></platform>
         Element platformElement = doc.createElement("platform");
@@ -136,6 +141,7 @@ public class ConfigurationGenerator {
     public void generateTopology(int nodeCount, int connLevel) {
         int linkCount = connLevel * nodeCount;
         Document doc = docBuilder.newDocument();
+        doc.setXmlStandalone(true);
 
         // Create tags <platform version=""></platform>
         Element platformElement = doc.createElement("platform");

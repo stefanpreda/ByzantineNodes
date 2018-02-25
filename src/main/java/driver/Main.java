@@ -1,6 +1,7 @@
 package driver;
 
 import generator.ConfigurationGenerator;
+import org.simgrid.msg.Msg;
 
 public class Main {
 
@@ -9,5 +10,12 @@ public class Main {
 
         generator.generateTopology(10, 3);
         generator.generateNodeRoles(7, 3);
+
+        Msg.init(args);
+
+        Msg.createEnvironment(ConfigurationGenerator.FOLDER_NAME + "/" + ConfigurationGenerator.TOPOLOGY_FILE_NAME);
+        Msg.deployApplication(ConfigurationGenerator.FOLDER_NAME + "/" + ConfigurationGenerator.ROLES_FILE_NAME);
+
+        Msg.run();
     }
 }
