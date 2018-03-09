@@ -14,9 +14,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.util.Random;
 
 public class ConfigurationGenerator {
 
+    private Random randomNumberGenerator = new Random();
     private DocumentBuilder docBuilder = null;
     private Transformer transformer = null;
 
@@ -27,10 +29,9 @@ public class ConfigurationGenerator {
     public static final String TOPOLOGY_FILE_NAME = "topology.xml";
 
     private static final String HOST_SPEED = "100.00Mf";
-    private static final String LINK_BANDWIDTH = "100.00MBps";
     private static final String LINK_LATENCY = "50.00us";
-    private static final String LOOPBACK_BANDWIDTH = "500.00MBps";
-    private static final String LOOPBACK_LATENCY = "5.00us";
+    private static final int LINK_BANDWIDTH_MIN = 50;
+    private static final int LINK_BANDWIDTH_MAX = 100;
 
     public ConfigurationGenerator() {
 
@@ -158,7 +159,7 @@ public class ConfigurationGenerator {
         zoneAttr.setValue("zone0");
         zoneElement.setAttributeNode(zoneAttr);
         zoneAttr = doc.createAttribute("routing");
-        zoneAttr.setValue("Full");
+        zoneAttr.setValue("Dijkstra");
         zoneElement.setAttributeNode(zoneAttr);
 
         //Append zone to platform
@@ -180,59 +181,24 @@ public class ConfigurationGenerator {
             zoneElement.appendChild(hostElement);
         }
 
-        //Create tags <link id="" bandwidth="" latency=""></link>
-        Element linkElement = doc.createElement("link");
-        Attr linkAttr = doc.createAttribute("id");
-        linkAttr.setValue("standard_link");
-        linkElement.setAttributeNode(linkAttr);
-        linkAttr = doc.createAttribute("bandwidth");
-        linkAttr.setValue(LINK_BANDWIDTH);
-        linkElement.setAttributeNode(linkAttr);
-        linkAttr = doc.createAttribute("latency");
-        linkAttr.setValue(LINK_LATENCY);
-        linkElement.setAttributeNode(linkAttr);
+        //Generate links
+        for (int i = 0; i < linkCount; i++) {
 
-        //Append link to zone
-        zoneElement.appendChild(linkElement);
+            //Create tags <link id="" bandwidth="" latency=""></link>
+            Element linkElement = doc.createElement("link");
+            Attr linkAttr = doc.createAttribute("id");
+            linkAttr.setValue("link_" + i);
+            linkElement.setAttributeNode(linkAttr);
+            linkAttr = doc.createAttribute("bandwidth");
+            linkAttr.setValue(String.valueOf(LINK_BANDWIDTH_MIN + randomNumberGenerator
+                    .nextInt(LINK_BANDWIDTH_MAX - LINK_BANDWIDTH_MIN)) + ".00MBps");
+            linkElement.setAttributeNode(linkAttr);
+            linkAttr = doc.createAttribute("latency");
+            linkAttr.setValue(LINK_LATENCY);
+            linkElement.setAttributeNode(linkAttr);
 
-        //Generate loopback link
-        linkElement = doc.createElement("link");
-        linkAttr = doc.createAttribute("id");
-        linkAttr.setValue("loopback");
-        linkElement.setAttributeNode(linkAttr);
-        linkAttr = doc.createAttribute("bandwidth");
-        linkAttr.setValue(LOOPBACK_BANDWIDTH);
-        linkElement.setAttributeNode(linkAttr);
-        linkAttr = doc.createAttribute("latency");
-        linkAttr.setValue(LOOPBACK_LATENCY);
-        linkElement.setAttributeNode(linkAttr);
-
-        //Append loopback link to zone
-        zoneElement.appendChild(linkElement);
-
-        //Generate loopback routes
-        for (int i = 0; i < nodeCount; i++) {
-
-            //Create tags <route src="" dst=""></route>
-            Element routeElement = doc.createElement("route");
-            Attr routeAttr = doc.createAttribute("src");
-            routeAttr.setValue("node_" + i);
-            routeElement.setAttributeNode(routeAttr);
-            routeAttr = doc.createAttribute("dst");
-            routeAttr.setValue("node_" + i);
-            routeElement.setAttributeNode(routeAttr);
-
-            //Create tags <link_ctn id=""></link_ctn>
-            Element linkCtnElement = doc.createElement("link_ctn");
-            Attr linkCtnAttr = doc.createAttribute("id");
-            linkCtnAttr.setValue("loopback");
-            linkCtnElement.setAttributeNode(linkCtnAttr);
-
-            //Append link_ctn to route
-            routeElement.appendChild(linkCtnElement);
-
-            //Append route to zone
-            zoneElement.appendChild(routeElement);
+            //Append link to zone
+            zoneElement.appendChild(linkElement);
         }
 
         //Generate 1-hop routes
@@ -242,7 +208,9 @@ public class ConfigurationGenerator {
             for (int j = 0; j < connLevel; j++) {
 
                 int destNodeID = (i + j + 1) % nodeCount;
+                int linkID = i * connLevel + j;
 
+                //Route from i -> destNodeID
                 //Create tags <route src="" dst=""></route>
                 Element routeElement = doc.createElement("route");
                 Attr routeAttr = doc.createAttribute("src");
@@ -255,7 +223,7 @@ public class ConfigurationGenerator {
                 //Create tags <link_ctn id=""></link_ctn>
                 Element linkCtnElement = doc.createElement("link_ctn");
                 Attr linkCtnAttr = doc.createAttribute("id");
-                linkCtnAttr.setValue("standard_link");
+                linkCtnAttr.setValue("link_" + linkID);
                 linkCtnElement.setAttributeNode(linkCtnAttr);
 
                 //Append link_ctn to route
