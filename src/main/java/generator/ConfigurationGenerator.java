@@ -33,6 +33,9 @@ public class ConfigurationGenerator {
     private static final int LINK_BANDWIDTH_MIN = 50;
     private static final int LINK_BANDWIDTH_MAX = 100;
 
+    //High value so Dijkstra always returns direct link as best link
+    private static final String SIMULATION_NODE_LINK_BANDWIDTH = "200.00MBps";
+
     public ConfigurationGenerator() {
 
         try {
@@ -117,6 +120,29 @@ public class ConfigurationGenerator {
             platformElement.appendChild(actorLegitElement);
         }
 
+        // Create a SimulationController node
+        int index = countLegitNodes + countByzantineNodes;
+        // Create tags <actor host="" function=""></actor>
+        Element actorLegitElement = doc.createElement("actor");
+        Attr actorLegitAttr = doc.createAttribute("host");
+        actorLegitAttr.setValue("node_" + index);
+        actorLegitElement.setAttributeNode(actorLegitAttr);
+        actorLegitAttr = doc.createAttribute("function");
+        actorLegitAttr.setValue("node.SimulationController");
+        actorLegitElement.setAttributeNode(actorLegitAttr);
+
+        // Create tags <argument value=""/>
+        Element argumentElement = doc.createElement("argument");
+        Attr argumentAttr = doc.createAttribute("value");
+        argumentAttr.setValue(String.valueOf(index));
+        argumentElement.setAttributeNode(argumentAttr);
+
+        // Append argument to actor
+        actorLegitElement.appendChild(argumentElement);
+
+        // Append actor to platform
+        platformElement.appendChild(actorLegitElement);
+
         DOMSource source = new DOMSource(doc);
         StreamResult result = new StreamResult(new File(FOLDER_NAME + "/" + ROLES_FILE_NAME));
 
@@ -165,8 +191,8 @@ public class ConfigurationGenerator {
         //Append zone to platform
         platformElement.appendChild(zoneElement);
 
-        //Generate nodes
-        for (int i = 0; i < nodeCount; i++) {
+        //Generate nodes (1 extra for SimulationController)
+        for (int i = 0; i < nodeCount + 1; i++) {
 
             //Create tags <host id="" speed=""></host>
             Element hostElement = doc.createElement("host");
@@ -201,6 +227,22 @@ public class ConfigurationGenerator {
             zoneElement.appendChild(linkElement);
         }
 
+        //Create one extra link which will be used for connecting the SimulationController
+        //Create tags <link id="" bandwidth="" latency=""></link>
+        Element linkElement = doc.createElement("link");
+        Attr linkAttr = doc.createAttribute("id");
+        linkAttr.setValue("link_" + linkCount);
+        linkElement.setAttributeNode(linkAttr);
+        linkAttr = doc.createAttribute("bandwidth");
+        linkAttr.setValue(SIMULATION_NODE_LINK_BANDWIDTH);
+        linkElement.setAttributeNode(linkAttr);
+        linkAttr = doc.createAttribute("latency");
+        linkAttr.setValue(LINK_LATENCY);
+        linkElement.setAttributeNode(linkAttr);
+
+        //Append link to zone
+        zoneElement.appendChild(linkElement);
+
         //Generate 1-hop routes
         for (int i = 0; i < nodeCount; i++) {
 
@@ -232,6 +274,32 @@ public class ConfigurationGenerator {
                 //Append route to zone
                 zoneElement.appendChild(routeElement);
             }
+        }
+
+        //Generate 1-hop routes for the SimulationController
+        for (int i = 0; i < nodeCount; i++) {
+
+            //Route from i -> nodeCount (last node)
+            //Create tags <route src="" dst=""></route>
+            Element routeElement = doc.createElement("route");
+            Attr routeAttr = doc.createAttribute("src");
+            routeAttr.setValue("node_" + i);
+            routeElement.setAttributeNode(routeAttr);
+            routeAttr = doc.createAttribute("dst");
+            routeAttr.setValue("node_" + nodeCount);
+            routeElement.setAttributeNode(routeAttr);
+
+            //Create tags <link_ctn id=""></link_ctn>
+            Element linkCtnElement = doc.createElement("link_ctn");
+            Attr linkCtnAttr = doc.createAttribute("id");
+            linkCtnAttr.setValue("link_" + linkCount);
+            linkCtnElement.setAttributeNode(linkCtnAttr);
+
+            //Append link_ctn to route
+            routeElement.appendChild(linkCtnElement);
+
+            //Append route to zone
+            zoneElement.appendChild(routeElement);
         }
 
         DOMSource source = new DOMSource(doc);
