@@ -265,10 +265,39 @@ public class ConfigurationGenerator {
                     routeAttr = doc.createAttribute("dst");
                     routeAttr.setValue("node_" + destNodeID);
                     routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("symmetrical");
+                    routeAttr.setValue("NO");
+                    routeElement.setAttributeNode(routeAttr);
 
                     //Create tags <link_ctn id=""></link_ctn>
                     Element linkCtnElement = doc.createElement("link_ctn");
                     Attr linkCtnAttr = doc.createAttribute("id");
+                    linkCtnAttr.setValue("link_" + linkID);
+                    linkCtnElement.setAttributeNode(linkCtnAttr);
+
+                    //Append link_ctn to route
+                    routeElement.appendChild(linkCtnElement);
+
+                    //Append route to zone
+                    zoneElement.appendChild(routeElement);
+
+                    //Route from destNodeID -> i
+                    //REASON: BUG IN SIMULATOR, NEED TO SPECIFY BOTH DIRECTION WITH SYMMETRICAL SET TO "NO"
+                    //Create tags <route src="" dst=""></route>
+                    routeElement = doc.createElement("route");
+                    routeAttr = doc.createAttribute("src");
+                    routeAttr.setValue("node_" + destNodeID);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("dst");
+                    routeAttr.setValue("node_" + i);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("symmetrical");
+                    routeAttr.setValue("NO");
+                    routeElement.setAttributeNode(routeAttr);
+
+                    //Create tags <link_ctn id=""></link_ctn>
+                    linkCtnElement = doc.createElement("link_ctn");
+                    linkCtnAttr = doc.createAttribute("id");
                     linkCtnAttr.setValue("link_" + linkID);
                     linkCtnElement.setAttributeNode(linkCtnAttr);
 
@@ -304,10 +333,39 @@ public class ConfigurationGenerator {
                     routeAttr = doc.createAttribute("dst");
                     routeAttr.setValue("node_" + destNodeID);
                     routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("symmetrical");
+                    routeAttr.setValue("NO");
+                    routeElement.setAttributeNode(routeAttr);
 
                     //Create tags <link_ctn id=""></link_ctn>
                     Element linkCtnElement = doc.createElement("link_ctn");
                     Attr linkCtnAttr = doc.createAttribute("id");
+                    linkCtnAttr.setValue("link_" + linkID);
+                    linkCtnElement.setAttributeNode(linkCtnAttr);
+
+                    //Append link_ctn to route
+                    routeElement.appendChild(linkCtnElement);
+
+                    //Append route to zone
+                    zoneElement.appendChild(routeElement);
+
+                    //Route from destNodeID -> i
+                    //REASON: BUG IN SIMULATOR, NEED TO SPECIFY BOTH DIRECTION WITH SYMMETRICAL SET TO "NO"
+                    //Create tags <route src="" dst=""></route>
+                    routeElement = doc.createElement("route");
+                    routeAttr = doc.createAttribute("src");
+                    routeAttr.setValue("node_" + destNodeID);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("dst");
+                    routeAttr.setValue("node_" + i);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("symmetrical");
+                    routeAttr.setValue("NO");
+                    routeElement.setAttributeNode(routeAttr);
+
+                    //Create tags <link_ctn id=""></link_ctn>
+                    linkCtnElement = doc.createElement("link_ctn");
+                    linkCtnAttr = doc.createAttribute("id");
                     linkCtnAttr.setValue("link_" + linkID);
                     linkCtnElement.setAttributeNode(linkCtnAttr);
 
@@ -329,7 +387,7 @@ public class ConfigurationGenerator {
         for (int i = 0; i < nodeCount; i++) {
 
             //Route from i -> nodeCount (last node)
-            //Create tags <route src="" dst=""></route>
+            //Create tags <route src="" dst="" SYMMETRICAL="NO"></route>
             Element routeElement = doc.createElement("route");
             Attr routeAttr = doc.createAttribute("src");
             routeAttr.setValue("node_" + i);
@@ -337,10 +395,39 @@ public class ConfigurationGenerator {
             routeAttr = doc.createAttribute("dst");
             routeAttr.setValue("node_" + nodeCount);
             routeElement.setAttributeNode(routeAttr);
+            routeAttr = doc.createAttribute("symmetrical");
+            routeAttr.setValue("NO");
+            routeElement.setAttributeNode(routeAttr);
 
             //Create tags <link_ctn id=""></link_ctn>
             Element linkCtnElement = doc.createElement("link_ctn");
             Attr linkCtnAttr = doc.createAttribute("id");
+            linkCtnAttr.setValue("link_" + linkCount);
+            linkCtnElement.setAttributeNode(linkCtnAttr);
+
+            //Append link_ctn to route
+            routeElement.appendChild(linkCtnElement);
+
+            //Append route to zone
+            zoneElement.appendChild(routeElement);
+
+            //Route from nodeCount -> i (last node)
+            //REASON: BUG IN SIMULATOR, NEED TO SPECIFY BOTH DIRECTION WITH SYMMETRICAL SET TO "NO"
+            //Create tags <route src="" dst="" SYMMETRICAL="NO"></route>
+            routeElement = doc.createElement("route");
+            routeAttr = doc.createAttribute("src");
+            routeAttr.setValue("node_" + nodeCount);
+            routeElement.setAttributeNode(routeAttr);
+            routeAttr = doc.createAttribute("dst");
+            routeAttr.setValue("node_" + i);
+            routeElement.setAttributeNode(routeAttr);
+            routeAttr = doc.createAttribute("symmetrical");
+            routeAttr.setValue("NO");
+            routeElement.setAttributeNode(routeAttr);
+
+            //Create tags <link_ctn id=""></link_ctn>
+            linkCtnElement = doc.createElement("link_ctn");
+            linkCtnAttr = doc.createAttribute("id");
             linkCtnAttr.setValue("link_" + linkCount);
             linkCtnElement.setAttributeNode(linkCtnAttr);
 
