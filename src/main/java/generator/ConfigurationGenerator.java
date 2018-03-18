@@ -36,6 +36,8 @@ public class ConfigurationGenerator {
     //High value so Dijkstra always returns direct link as best link
     private static final String SIMULATION_NODE_LINK_BANDWIDTH = "200.00MBps";
 
+    private int[][] topology;
+
     public ConfigurationGenerator() {
 
         try {
@@ -165,7 +167,8 @@ public class ConfigurationGenerator {
     }
 
     //connLevel = node[i] connects to node[i+1]..node[i+level]
-    public void generateTopology(int nodeCount, int connLevel) {
+    public void generateTopology(int nodeCount, int connLevel, boolean circular) {
+        topology = new int[nodeCount][nodeCount];
         int linkCount = connLevel * nodeCount;
         Document doc = docBuilder.newDocument();
         doc.setXmlStandalone(true);
@@ -243,38 +246,84 @@ public class ConfigurationGenerator {
         //Append link to zone
         zoneElement.appendChild(linkElement);
 
-        //Generate 1-hop routes
-        for (int i = 0; i < nodeCount; i++) {
+        if (circular) {
+            //Generate 1-hop routes
+            for (int i = 0; i < nodeCount; i++) {
 
-            //j = count of links
-            for (int j = 0; j < connLevel; j++) {
+                //j = count of links
+                for (int j = 0; j < connLevel; j++) {
 
-                int destNodeID = (i + j + 1) % nodeCount;
-                int linkID = i * connLevel + j;
+                    int destNodeID = (i + j + 1) % nodeCount;
+                    int linkID = i * connLevel + j;
 
-                //Route from i -> destNodeID
-                //Create tags <route src="" dst=""></route>
-                Element routeElement = doc.createElement("route");
-                Attr routeAttr = doc.createAttribute("src");
-                routeAttr.setValue("node_" + i);
-                routeElement.setAttributeNode(routeAttr);
-                routeAttr = doc.createAttribute("dst");
-                routeAttr.setValue("node_" + destNodeID);
-                routeElement.setAttributeNode(routeAttr);
+                    //Route from i -> destNodeID
+                    //Create tags <route src="" dst=""></route>
+                    Element routeElement = doc.createElement("route");
+                    Attr routeAttr = doc.createAttribute("src");
+                    routeAttr.setValue("node_" + i);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("dst");
+                    routeAttr.setValue("node_" + destNodeID);
+                    routeElement.setAttributeNode(routeAttr);
 
-                //Create tags <link_ctn id=""></link_ctn>
-                Element linkCtnElement = doc.createElement("link_ctn");
-                Attr linkCtnAttr = doc.createAttribute("id");
-                linkCtnAttr.setValue("link_" + linkID);
-                linkCtnElement.setAttributeNode(linkCtnAttr);
+                    //Create tags <link_ctn id=""></link_ctn>
+                    Element linkCtnElement = doc.createElement("link_ctn");
+                    Attr linkCtnAttr = doc.createAttribute("id");
+                    linkCtnAttr.setValue("link_" + linkID);
+                    linkCtnElement.setAttributeNode(linkCtnAttr);
 
-                //Append link_ctn to route
-                routeElement.appendChild(linkCtnElement);
+                    //Append link_ctn to route
+                    routeElement.appendChild(linkCtnElement);
 
-                //Append route to zone
-                zoneElement.appendChild(routeElement);
+                    //Append route to zone
+                    zoneElement.appendChild(routeElement);
+
+                    //Add to topology matrix
+                    topology[i][destNodeID] = 1;
+                    topology[destNodeID][i] = 1;
+                }
             }
         }
+        //Random connections
+        else {
+            //Generate 1-hop routes
+            for (int i = 0; i < nodeCount; i++) {
+
+                //j = count of links
+                for (int j = 0; j < connLevel; j++) {
+
+                    int destNodeID = generateRandomDestination(i, nodeCount, topology);
+                    int linkID = i * connLevel + j;
+
+                    //Route from i -> destNodeID
+                    //Create tags <route src="" dst=""></route>
+                    Element routeElement = doc.createElement("route");
+                    Attr routeAttr = doc.createAttribute("src");
+                    routeAttr.setValue("node_" + i);
+                    routeElement.setAttributeNode(routeAttr);
+                    routeAttr = doc.createAttribute("dst");
+                    routeAttr.setValue("node_" + destNodeID);
+                    routeElement.setAttributeNode(routeAttr);
+
+                    //Create tags <link_ctn id=""></link_ctn>
+                    Element linkCtnElement = doc.createElement("link_ctn");
+                    Attr linkCtnAttr = doc.createAttribute("id");
+                    linkCtnAttr.setValue("link_" + linkID);
+                    linkCtnElement.setAttributeNode(linkCtnAttr);
+
+                    //Append link_ctn to route
+                    routeElement.appendChild(linkCtnElement);
+
+                    //Append route to zone
+                    zoneElement.appendChild(routeElement);
+
+                    //Add to topology matrix
+                    topology[i][destNodeID] = 1;
+                    topology[destNodeID][i] = 1;
+                }
+            }
+        }
+
 
         //Generate 1-hop routes for the SimulationController
         for (int i = 0; i < nodeCount; i++) {
@@ -321,5 +370,18 @@ public class ConfigurationGenerator {
         }
 
         System.out.println("FINISHED GENERATING TOPOLOGY FILE: " + FOLDER_NAME + "/" + TOPOLOGY_FILE_NAME);
+    }
+
+    private int generateRandomDestination(int source, int nodeCount, int[][] topology) {
+        int ret = -1;
+
+        if (source < 0)
+            return ret;
+
+        do
+            ret = randomNumberGenerator.nextInt(nodeCount);
+        while (ret == source || topology[source][ret] == 1);
+
+        return ret;
     }
 }

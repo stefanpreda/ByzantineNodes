@@ -8,7 +8,7 @@ public class Main {
     public static void main(String[] args) {
         ConfigurationGenerator generator = new ConfigurationGenerator();
 
-        generator.generateTopology(10, 3);
+        generator.generateTopology(10, 3, false);
         generator.generateNodeRoles(7, 3);
 
         Msg.init(args);
