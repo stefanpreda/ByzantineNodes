@@ -109,8 +109,11 @@ public class Byzantine extends Process {
                     if (!valid)
                         continue;
 
-                    //This is a valid leader selection, check if process already started (this is a duplicate in that case)
-                    if (leadershipSelectionApplicationStartTimestamp < 0)
+                    //This is a valid leader selection, setup the start time if there isn't an ongoing leader selection
+                    //Also setup the start time if something happened and the previous leader selection was not ended for this node
+                    //Use 3 times the timeout, once for application, once for decision process, once for result flooding
+                    if (leadershipSelectionApplicationStartTimestamp < 0 ||
+                            System.currentTimeMillis() - leadershipSelectionApplicationStartTimestamp > 3 * LEADER_ELECTION_TIMEOUT)
                         leadershipSelectionApplicationStartTimestamp = System.currentTimeMillis();
 
                     //Flood with applications only if not the current leader and did not flood already
