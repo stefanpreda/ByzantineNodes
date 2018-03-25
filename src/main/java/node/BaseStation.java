@@ -30,6 +30,8 @@ public class BaseStation extends Process {
 
         HashMap<String, Integer> ranks = generateRandomRanks(nodeCount);
 
+        System.out.println(ranks);
+
         //Wait for other nodes to start
         try {
             waitFor(3000);
@@ -40,7 +42,8 @@ public class BaseStation extends Process {
 
         //Send activation task
         for (int i = 0; i < nodeCount; i++) {
-            ActivationTask activationTask = new ActivationTask("ACTIVATION_TASK_" + i, COMPUTE_SIZE, COMMUNICATION_SIZE, ranks);
+            ActivationTask activationTask = new ActivationTask("ACTIVATION_TASK_" + i, COMPUTE_SIZE, COMMUNICATION_SIZE, ranks,
+                    "node_" + id, "node_" + i);
 
             try {
                 activationTask.send("node_" + i);
@@ -63,7 +66,7 @@ public class BaseStation extends Process {
 
         //Trigger initial leader selection
         for (int i = 0; i < nodeCount; i++) {
-            LeaderSelectionTask activationTask = new LeaderSelectionTask();
+            LeaderSelectionTask activationTask = new LeaderSelectionTask("node_" + id, "node_" + id);
 
             try {
                 activationTask.send("node_" + i);
@@ -78,7 +81,7 @@ public class BaseStation extends Process {
 
         //Wait for leader to be selected
         try {
-            waitFor(10000);
+            waitFor(60000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;

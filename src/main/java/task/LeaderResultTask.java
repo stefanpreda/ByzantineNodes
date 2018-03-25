@@ -2,15 +2,11 @@ package task;
 
 import org.simgrid.msg.Task;
 
-public class LeaderSelectionTask extends Task {
+public class LeaderResultTask extends Task {
 
+    private String host;
     private String originHost;
     private String destinationHost;
-
-    public LeaderSelectionTask(String originHost, String destinationHost) {
-        this.originHost = originHost;
-        this.destinationHost = destinationHost;
-    }
 
     public String getOriginHost() {
         return originHost;
@@ -20,6 +16,14 @@ public class LeaderSelectionTask extends Task {
         this.originHost = originHost;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     public String getDestinationHost() {
         return destinationHost;
     }
@@ -27,4 +31,5 @@ public class LeaderSelectionTask extends Task {
     public void setDestinationHost(String destinationHost) {
         this.destinationHost = destinationHost;
     }
+
 }
