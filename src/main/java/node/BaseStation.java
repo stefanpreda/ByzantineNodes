@@ -4,6 +4,8 @@ import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.ActivationTask;
 import task.FinishSimulationTask;
+import task.LeaderSelectionTask;
+
 import java.util.HashMap;
 import java.util.Random;
 
@@ -28,15 +30,17 @@ public class BaseStation extends Process {
 
         HashMap<String, Integer> ranks = generateRandomRanks(nodeCount);
 
+        //Wait for other nodes to start
         try {
-            waitFor(3);
+            waitFor(3000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
         }
 
+        //Send activation task
         for (int i = 0; i < nodeCount; i++) {
-            ActivationTask activationTask = new ActivationTask("TASK_" + i, COMPUTE_SIZE, COMMUNICATION_SIZE, ranks);
+            ActivationTask activationTask = new ActivationTask("ACTIVATION_TASK_" + i, COMPUTE_SIZE, COMMUNICATION_SIZE, ranks);
 
             try {
                 activationTask.send("node_" + i);
@@ -49,13 +53,38 @@ public class BaseStation extends Process {
             }
         }
 
+        //Wait for everyone to do the necessary configurations
         try {
-            waitFor(3);
+            waitFor(5000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
         }
 
+        //Trigger initial leader selection
+        for (int i = 0; i < nodeCount; i++) {
+            LeaderSelectionTask activationTask = new LeaderSelectionTask();
+
+            try {
+                activationTask.send("node_" + i);
+            } catch (TransferFailureException e) {
+                e.printStackTrace();
+            } catch (HostFailureException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
+        }
+
+        //Wait for leader to be selected
+        try {
+            waitFor(10000);
+        } catch (HostFailureException e) {
+            System.err.println("BaseStation host failed!!");
+            return;
+        }
+
+        //Send ending task to everyone
         for (int i = 0; i < nodeCount; i++) {
             FinishSimulationTask finishTask = new FinishSimulationTask();
 
