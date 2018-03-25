@@ -34,7 +34,7 @@ public class ConfigurationGenerator {
     private static final int LINK_BANDWIDTH_MAX = 100;
 
     //High value so Dijkstra always returns direct link as best link
-    private static final String SIMULATION_NODE_LINK_BANDWIDTH = "200.00MBps";
+    private static final String BASE_STATION_LINK_BANDWIDTH = "200.00MBps";
 
     private int[][] topology;
 
@@ -83,10 +83,19 @@ public class ConfigurationGenerator {
             actorLegitAttr.setValue("node.Legit");
             actorLegitElement.setAttributeNode(actorLegitAttr);
 
-            // Create tags <argument value=""/>
+            // Create tags <argument value=""/> THIS IS THE NAME OF THE HOST
             Element argumentElement = doc.createElement("argument");
             Attr argumentAttr = doc.createAttribute("value");
             argumentAttr.setValue(String.valueOf(i));
+            argumentElement.setAttributeNode(argumentAttr);
+
+            // Append argument to actor
+            actorLegitElement.appendChild(argumentElement);
+
+            // Create tags <argument value=""/> THIS IS THE NAME OF THE BASE STATION
+            argumentElement = doc.createElement("argument");
+            argumentAttr = doc.createAttribute("value");
+            argumentAttr.setValue("node_" + String.valueOf(countLegitNodes + countByzantineNodes));
             argumentElement.setAttributeNode(argumentAttr);
 
             // Append argument to actor
@@ -109,10 +118,19 @@ public class ConfigurationGenerator {
             actorLegitAttr.setValue("node.Byzantine");
             actorLegitElement.setAttributeNode(actorLegitAttr);
 
-            // Create tags <argument value=""/>
+            // Create tags <argument value=""/> THIS IS THE NAME OF THE HOST
             Element argumentElement = doc.createElement("argument");
             Attr argumentAttr = doc.createAttribute("value");
             argumentAttr.setValue(String.valueOf(index));
+            argumentElement.setAttributeNode(argumentAttr);
+
+            // Append argument to actor
+            actorLegitElement.appendChild(argumentElement);
+
+            // Create tags <argument value=""/> THIS IS THE NAME OF THE BASE STATION
+            argumentElement = doc.createElement("argument");
+            argumentAttr = doc.createAttribute("value");
+            argumentAttr.setValue("node_" + String.valueOf(countLegitNodes + countByzantineNodes));
             argumentElement.setAttributeNode(argumentAttr);
 
             // Append argument to actor
@@ -122,7 +140,7 @@ public class ConfigurationGenerator {
             platformElement.appendChild(actorLegitElement);
         }
 
-        // Create a SimulationController node
+        // Create a BaseStation node
         int index = countLegitNodes + countByzantineNodes;
         // Create tags <actor host="" function=""></actor>
         Element actorLegitElement = doc.createElement("actor");
@@ -130,13 +148,21 @@ public class ConfigurationGenerator {
         actorLegitAttr.setValue("node_" + index);
         actorLegitElement.setAttributeNode(actorLegitAttr);
         actorLegitAttr = doc.createAttribute("function");
-        actorLegitAttr.setValue("node.SimulationController");
+        actorLegitAttr.setValue("node.BaseStation");
         actorLegitElement.setAttributeNode(actorLegitAttr);
 
         // Create tags <argument value=""/>
         Element argumentElement = doc.createElement("argument");
         Attr argumentAttr = doc.createAttribute("value");
         argumentAttr.setValue(String.valueOf(index));
+        argumentElement.setAttributeNode(argumentAttr);
+
+        // Append argument to actor
+        actorLegitElement.appendChild(argumentElement);
+
+        argumentElement = doc.createElement("argument");
+        argumentAttr = doc.createAttribute("value");
+        argumentAttr.setValue(String.valueOf(countLegitNodes + countByzantineNodes));
         argumentElement.setAttributeNode(argumentAttr);
 
         // Append argument to actor
@@ -194,7 +220,7 @@ public class ConfigurationGenerator {
         //Append zone to platform
         platformElement.appendChild(zoneElement);
 
-        //Generate nodes (1 extra for SimulationController)
+        //Generate nodes (1 extra for BaseStation)
         for (int i = 0; i < nodeCount + 1; i++) {
 
             //Create tags <host id="" speed=""></host>
@@ -230,14 +256,14 @@ public class ConfigurationGenerator {
             zoneElement.appendChild(linkElement);
         }
 
-        //Create one extra link which will be used for connecting the SimulationController
+        //Create one extra link which will be used for connecting the BaseStation
         //Create tags <link id="" bandwidth="" latency=""></link>
         Element linkElement = doc.createElement("link");
         Attr linkAttr = doc.createAttribute("id");
         linkAttr.setValue("link_" + linkCount);
         linkElement.setAttributeNode(linkAttr);
         linkAttr = doc.createAttribute("bandwidth");
-        linkAttr.setValue(SIMULATION_NODE_LINK_BANDWIDTH);
+        linkAttr.setValue(BASE_STATION_LINK_BANDWIDTH);
         linkElement.setAttributeNode(linkAttr);
         linkAttr = doc.createAttribute("latency");
         linkAttr.setValue(LINK_LATENCY);
@@ -383,7 +409,7 @@ public class ConfigurationGenerator {
         }
 
 
-        //Generate 1-hop routes for the SimulationController
+        //Generate 1-hop routes for the BaseStation
         for (int i = 0; i < nodeCount; i++) {
 
             //Route from i -> nodeCount (last node)

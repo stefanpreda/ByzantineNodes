@@ -2,8 +2,9 @@ package node;
 
 import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
+import task.ActivationTask;
 import task.FinishSimulationTask;
-import task.MultiDestinationTask;
+import java.util.HashMap;
 
 public class Byzantine extends Process {
 
@@ -13,9 +14,12 @@ public class Byzantine extends Process {
 
     @Override
     public void main(String[] args) {
-        if (args.length != 1)
+        if (args.length != 2)
             Msg.info("Wrong number of arguments for BYZANTINE node");
         int id = Integer.parseInt(args[0]);
+        String baseStationHostName = args[1];
+        HashMap<String, Integer> ranks = null;
+
         System.out.println("BYZANTINE NODE " + id + " STARTED");
 
         while (true) {
@@ -38,26 +42,12 @@ public class Byzantine extends Process {
                     break;
                 }
 
-                //Received MultiDestinationTask from controller, route it normally for now
-                if (task instanceof MultiDestinationTask) {
-                    MultiDestinationTask receivedTask = (MultiDestinationTask)task;
-                    String finalDestination = receivedTask.getFinalDestination();
-                    String nextDestination = receivedTask.getNextDestination();
+                if (task instanceof ActivationTask) {
+                    ActivationTask activationTask = (ActivationTask)task;
 
-                    if (getHost().getName().equals(finalDestination)) {
-                        System.out.println("Node " + id + " RECEIVED data successfully and it is final destination");
-                    }
-                    else {
-                        try {
-                            task.send(nextDestination);
-                        } catch (TransferFailureException e) {
-                            e.printStackTrace();
-                        } catch (HostFailureException e) {
-                            e.printStackTrace();
-                        } catch (TimeoutException e) {
-                            e.printStackTrace();
-                        }
-                        System.out.println("Node " + id + " ROUTED data to " + nextDestination);
+                    if (activationTask.getSource().getName().equals(baseStationHostName)) {
+                        ranks = activationTask.getRanks();
+                        System.out.println("BYZANTINE NODE " + id + " RECEIVED ACTIVATION TASK FROM BASE STATION");
                     }
                 }
 
