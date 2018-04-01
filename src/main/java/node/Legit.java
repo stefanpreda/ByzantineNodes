@@ -4,15 +4,30 @@ import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Random;
 
 public class Legit extends Process {
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long LEADER_ELECTION_TIMEOUT = 15000;
 
+    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
+    private static final long MEASUREMENT_TIMEOUT = 15000;
+
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 0.5;
+    private static final double RECEIVE_TIMEOUT = 0.8;
+
+    //Measurement interval in millis (1m30sec)
+    private static final long MEASUREMENT_INTERVAL = 90000;
+
+    //The minimum value for random generator
+    private static final int MEASUREMENT_MIN = 10;
+
+    //The maximum value for random generator
+    private static final int MEASUREMENT_MAX = 30;
 
     //The currently elected leader
     private String currentLeader = null;
@@ -37,6 +52,27 @@ public class Legit extends Process {
 
     //The leader determined by this host based on applications
     private String computedLeader = null;
+
+    //The time when the leader last triggered a measurement
+    private long lastMeasurementTriggerTime = -1;
+
+    //The time when the flood with measurement messages started
+    private long measurementFloodStartTime =  -1;
+
+    //The time when the flood with measurement messages started
+    private long measurementFloodResultStartTime =  -1;
+
+    //Current measurements held in memory
+    private HashMap<String, Integer> measurementResults = new HashMap<>();
+
+    //Computed measurements from each node
+    private HashMap<String, Float> measurementFinalResults = new HashMap<>();
+
+    //Computed measurement by this node
+    private float computedMeasurement = -1.0f;
+
+    //Current measurement all nodes agreed upon
+    private float currentMeasurement = -1.0f;
 
     public Legit(Host host, String name, String[] args) {
         super(host, name, args);
@@ -90,6 +126,14 @@ public class Legit extends Process {
                 leadershipApplications.clear();
                 leaderApplicationSent = false;
 
+                //Wait a bit for all nodes to compute new leader #TODO Wait time based on number of nodes
+                try {
+                    waitFor(2000);
+                } catch (HostFailureException e) {
+                    System.err.println("BaseStation host failed!!");
+                    return;
+                }
+
                 //Trigger the flood with results
                 if (computedLeader != null) {
                     leadershipSelectionResultStartTimestamp = System.currentTimeMillis();
@@ -102,6 +146,14 @@ public class Legit extends Process {
                             leaderResultTask.setOriginHost(Host.currentHost().getName());
                             leaderResultTask.setDestinationHost(destination);
                             leaderResultTask.isend(destination);
+
+                            //Don't send them too fast
+                            try {
+                                waitFor(300);
+                            } catch (HostFailureException e) {
+                                System.err.println("LEGIT" + id + " host failed!!");
+                                return;
+                            }
 
                         }
                     }
@@ -161,7 +213,168 @@ public class Legit extends Process {
                 leaderApplicationSent = false;
                 computedLeader = null;
 
+                //Setup start time for measurement trigger
+                lastMeasurementTriggerTime = System.currentTimeMillis();
+
                 if (task == null || task instanceof LeaderResultTask)
+                    continue;
+            }
+
+            //Leader triggers measurement periodically only if a leader selection is not in progress
+            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) &&
+                    leadershipSelectionApplicationStartTimestamp < 0 && leadershipSelectionResultStartTimestamp < 0 &&
+                    (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
+                lastMeasurementTriggerTime = System.currentTimeMillis();
+
+                //Flood with measurement trigger messages
+                for (String destination : ranks.keySet()) {
+                    if (!destination.equals(Host.currentHost().getName())) {
+                        TriggerDataCollectionTask triggerDataCollectionTask = new TriggerDataCollectionTask();
+                        triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
+                        triggerDataCollectionTask.setDestinationHost(destination);
+                        triggerDataCollectionTask.isend(destination);
+
+                        //Don't send them so fast
+                        try {
+                            waitFor(300);
+                        } catch (HostFailureException e) {
+                            System.err.println("LEGIT " + id + " host failed!!");
+                            return;
+                        }
+                    }
+                }
+
+                //Wait for a while so all hosts receive the trigger message
+                try {
+                    waitFor(2000);
+                } catch (HostFailureException e) {
+                    System.err.println("LEGIT" + id + " host failed!!");
+                    return;
+                }
+
+                measurementFloodStartTime = System.currentTimeMillis();
+                measurementResults.clear();
+                measurementFinalResults.clear();
+                computedMeasurement = -1.0f;
+
+                int measurement = generateMeasurement();
+
+                //Flood with measurements
+                for (String destination : ranks.keySet()) {
+                    if (!destination.equals(Host.currentHost().getName())) {
+                        DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
+                        dataMeasurementTask.setResult(measurement);
+                        dataMeasurementTask.setOriginHost(Host.currentHost().getName());
+                        dataMeasurementTask.setDestinationHost(destination);
+                        dataMeasurementTask.isend(destination);
+
+                        //Don't send them so fast
+                        try {
+                            waitFor(300);
+                        } catch (HostFailureException e) {
+                            System.err.println("LEGIT " + id + " host failed!!");
+                            return;
+                        }
+                    }
+                }
+
+                //Also store own measurement
+                measurementResults.put(Host.currentHost().getName(), measurement);
+            }
+
+            //MEASUREMENTS FLOOD ENDED
+            if (measurementFloodStartTime > 0
+                    && (System.currentTimeMillis() - measurementFloodStartTime > MEASUREMENT_TIMEOUT)) {
+
+                System.out.println("LEGIT NODE " + id + " FINISHED RECEIVING MEASUREMENTS AND HAS THIS LIST: " + measurementResults);
+
+                computedMeasurement = computeCommonValue();
+
+                //Wait for a while so all hosts finish computing
+                try {
+                    waitFor(2000);
+                } catch (HostFailureException e) {
+                    System.err.println("LEGIT" + id + " host failed!!");
+                    return;
+                }
+
+                measurementFloodResultStartTime = System.currentTimeMillis();
+                measurementFloodStartTime = -1;
+                measurementResults.clear();
+                measurementFinalResults.clear();
+
+                //Flood with common measurement
+                for (String destination : ranks.keySet()) {
+                    if (!destination.equals(Host.currentHost().getName())) {
+                        DataResultTask dataResultTask = new DataResultTask();
+                        dataResultTask.setResult(computedMeasurement);
+                        dataResultTask.setOriginHost(Host.currentHost().getName());
+                        dataResultTask.setDestinationHost(destination);
+                        dataResultTask.isend(destination);
+
+                        //Don't send them so fast
+                        try {
+                            waitFor(300);
+                        } catch (HostFailureException e) {
+                            System.err.println("LEGIT " + id + " host failed!!");
+                            return;
+                        }
+                    }
+                }
+
+                //Add own computed value
+                measurementFinalResults.put(Host.currentHost().getName(), computedMeasurement);
+
+                if (task == null || task instanceof DataMeasurementTask)
+                    continue;
+            }
+
+            //MEASUREMENTS RESULT FLOOD ENDED
+            if (measurementFloodResultStartTime > 0
+                    && (System.currentTimeMillis() - measurementFloodResultStartTime > MEASUREMENT_TIMEOUT)) {
+
+                System.out.println("LEGIT NODE " + id + " FINISHED RECEIVING MEASUREMENT RESULTS AND HAS THIS LIST: " + measurementFinalResults);
+
+                HashMap<Float, Integer> votes = new HashMap<>();
+
+                for (String host : measurementFinalResults.keySet()) {
+                    Integer num_votes = votes.get(measurementFinalResults.get(host));
+                    if (num_votes == null)
+                        votes.put(measurementFinalResults.get(host), 1);
+                    else
+                        votes.put(measurementFinalResults.get(host), num_votes + 1);
+                }
+
+                int maxVotes = Integer.MIN_VALUE;
+                float newMeasurement = -1.0f;
+
+                Iterator<Float> it = votes.keySet().iterator();
+
+                while (it.hasNext()) {
+                    Float value = it.next();
+                    Integer voteCount = votes.get(value);
+
+                    if (voteCount > maxVotes) {
+                        maxVotes = voteCount;
+                        newMeasurement = value;
+                    }
+                }
+
+                if (newMeasurement > 0) {
+                    currentMeasurement = newMeasurement;
+                    System.out.println("LEGIT NODE " + id + " UPDATE MEASUREMENT: " + newMeasurement);
+                }
+                else {
+                    System.out.println("LEGIT NODE " + id + " DID NOT RECEIVE ANY MEASUREMENT RESULTS");
+                }
+
+                measurementFloodResultStartTime = -1;
+                measurementFloodStartTime = -1;
+                measurementResults.clear();
+                measurementFinalResults.clear();
+                computedMeasurement = -1.0f;
+
+                if (task == null || task instanceof DataResultTask)
                     continue;
             }
 
@@ -205,6 +418,14 @@ public class Legit extends Process {
                     if (!valid)
                         continue;
 
+                    //Wait a bit for all nodes to receive the leader selection message #TODO Wait time based on number of nodes
+                    try {
+                        waitFor(2000);
+                    } catch (HostFailureException e) {
+                        System.err.println("BaseStation host failed!!");
+                        return;
+                    }
+
                     //This is a valid leader selection, setup the start time if there isn't an ongoing leader selection
                     if (leadershipSelectionApplicationStartTimestamp < 0) {
                         leadershipSelectionApplicationStartTimestamp = System.currentTimeMillis();
@@ -237,6 +458,14 @@ public class Legit extends Process {
                                 leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
                                 leadershipApplicationTask.setDestinationHost(destination);
                                 leadershipApplicationTask.isend(destination);
+
+                                //Don't send them so fast
+                                try {
+                                    waitFor(300);
+                                } catch (HostFailureException e) {
+                                    System.err.println("LEGIT " + id + " host failed!!");
+                                    return;
+                                }
                             }
                         }
 
@@ -248,6 +477,10 @@ public class Legit extends Process {
 
                 if (task instanceof LeadershipApplicationTask) {
                     LeadershipApplicationTask leadershipApplicationTask = (LeadershipApplicationTask)task;
+
+                    //Received leadership application without a leadership selection triggered
+                    if (leadershipSelectionApplicationStartTimestamp < 0)
+                        continue;
 
                     //Check if the rank received in the application is bigger than the one in memory
                     //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
@@ -276,6 +509,11 @@ public class Legit extends Process {
                 if (task instanceof LeaderResultTask) {
                     LeaderResultTask leaderResultTask = (LeaderResultTask)task;
 
+                    //Received leadership result without a leadership selection triggered
+                    if (leadershipSelectionResultStartTimestamp < 0)
+                        continue;
+
+
                     //Accept only one result from each host
                     if (leadershipResults.get(leaderResultTask.getOriginHost()) == null) {
                         leadershipResults.put(leaderResultTask.getOriginHost(), leaderResultTask.getHost());
@@ -289,9 +527,144 @@ public class Legit extends Process {
                     }
                 }
 
+                if (task instanceof TriggerDataCollectionTask) {
+                    TriggerDataCollectionTask triggerDataCollectionTask = (TriggerDataCollectionTask) task;
+                    boolean valid = true;
+
+                    //Check if the message came from the current leader
+                    //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
+                    if (currentLeader == null || !triggerDataCollectionTask.getOriginHost().equals(currentLeader)) {
+                        valid = false;
+                    }
+
+                    //Received measurement task during leader selection process
+                    if (leadershipSelectionApplicationStartTimestamp > 0 || leadershipSelectionResultStartTimestamp > 0) {
+                        valid = false;
+                    }
+
+                    if (!valid)
+                        continue;
+
+                    System.out.println("LEGIT NODE " + id + " RECEIVED MEASUREMENT TRIGGER TASK FROM " +
+                            triggerDataCollectionTask.getOriginHost());
+
+                    //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
+                    try {
+                        waitFor(5000);
+                    } catch (HostFailureException e) {
+                        System.err.println("LEGIT" + id + " host failed!!");
+                        return;
+                    }
+
+                    //Ignore this request if it is too frequent
+                    if (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)
+                        lastMeasurementTriggerTime = System.currentTimeMillis();
+                    else
+                        continue;
+
+                    measurementFloodStartTime = System.currentTimeMillis();
+                    measurementResults.clear();
+                    measurementFinalResults.clear();
+                    computedMeasurement = -1.0f;
+
+                    //Generate a random value within bounds
+                    int measurement = generateMeasurement();
+
+                    //Flood with measurements
+                    for (String destination : ranks.keySet()) {
+                        if (!destination.equals(Host.currentHost().getName())) {
+                            DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
+                            dataMeasurementTask.setResult(measurement);
+                            dataMeasurementTask.setOriginHost(Host.currentHost().getName());
+                            dataMeasurementTask.setDestinationHost(destination);
+                            dataMeasurementTask.isend(destination);
+
+                            //Don't send them so fast
+                            try {
+                                waitFor(300);
+                            } catch (HostFailureException e) {
+                                System.err.println("LEGIT " + id + " host failed!!");
+                                return;
+                            }
+                        }
+                    }
+
+                    //Also store own measurement
+                    measurementResults.put(Host.currentHost().getName(), measurement);
+                }
+
+                if (task instanceof DataMeasurementTask) {
+                    DataMeasurementTask dataMeasurementTask = (DataMeasurementTask) task;
+
+                    if (measurementFloodStartTime < 0)
+                        continue;
+
+                    //Accept only one result from each host
+                    if (measurementResults.get(dataMeasurementTask.getOriginHost()) == null) {
+                        measurementResults.put(dataMeasurementTask.getOriginHost(), dataMeasurementTask.getResult());
+
+                        System.out.println("LEGIT NODE " + id + " RECEIVED MEASUREMENT TASK FROM " +
+                                dataMeasurementTask.getOriginHost());
+                    }
+                    else {
+                        System.out.println("LEGIT NODE " + id + " RECEIVED DUPLICATE MEASUREMENT TASK FROM " +
+                                dataMeasurementTask.getOriginHost());
+                    }
+                }
+
+                if (task instanceof DataResultTask) {
+                    DataResultTask dataResultTask = (DataResultTask)task;
+
+                    //Received measurement result without a measurement computation triggered
+                    if (measurementFloodResultStartTime < 0)
+                        continue;
+
+                    //Accept only one result from each host
+                    if (measurementFinalResults.get(dataResultTask.getOriginHost()) == null) {
+                        measurementFinalResults.put(dataResultTask.getOriginHost(), dataResultTask.getResult());
+
+                        System.out.println("LEGIT NODE " + id + " RECEIVED MEASUREMENT RESULT TASK FROM " +
+                                dataResultTask.getOriginHost());
+                    }
+                    else {
+                        System.out.println("LEGIT NODE " + id + " RECEIVED DUPLICATE MEASUREMENT RESULT TASK FROM " +
+                                dataResultTask.getOriginHost());
+                    }
+                }
             }
         }
 
         System.out.println("LEGIT NODE " + id + " FINISHED");
+    }
+
+    private int generateMeasurement() {
+        Random random = new Random();
+
+        return MEASUREMENT_MIN + random.nextInt(MEASUREMENT_MAX - MEASUREMENT_MIN);
+    }
+
+    private float computeCommonValue() {
+        ArrayList<Integer> legitValues = new ArrayList<>();
+
+        int count = measurementResults.keySet().size();
+        int sum = 0;
+
+        for (String host : measurementResults.keySet())
+            sum += measurementResults.get(host);
+
+        for (String host : measurementResults.keySet()) {
+            float average = (sum - measurementResults.get(host)) / (count - 1);
+            if ((measurementResults.get(host) - average) < (MEASUREMENT_MAX - MEASUREMENT_MIN))
+                legitValues.add(measurementResults.get(host));
+        }
+
+        count = legitValues.size();
+        sum = 0;
+
+        for (Integer i : legitValues)
+            sum += i;
+
+        return (float)sum / count;
+
     }
 }

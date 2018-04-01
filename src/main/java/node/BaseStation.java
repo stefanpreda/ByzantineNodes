@@ -79,9 +79,9 @@ public class BaseStation extends Process {
             }
         }
 
-        //Wait for leader to be selected
+        //Wait for the algorithm to end
         try {
-            waitFor(60000);
+            waitFor(330000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
