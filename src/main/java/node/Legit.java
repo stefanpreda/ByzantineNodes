@@ -18,10 +18,10 @@ public class Legit extends Process {
     private static final long MEASUREMENT_TIMEOUT = 15000;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 0.8;
+    private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (1m30sec)
-    private static final long MEASUREMENT_INTERVAL = 90000;
+    private static final long MEASUREMENT_INTERVAL = 60000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -145,11 +145,11 @@ public class Legit extends Process {
                             leaderResultTask.setHost(computedLeader);
                             leaderResultTask.setOriginHost(Host.currentHost().getName());
                             leaderResultTask.setDestinationHost(destination);
-                            leaderResultTask.isend(destination);
+                            leaderResultTask.dsend(destination);
 
                             //Don't send them too fast
                             try {
-                                waitFor(300);
+                                waitFor(500);
                             } catch (HostFailureException e) {
                                 System.err.println("LEGIT" + id + " host failed!!");
                                 return;
@@ -232,14 +232,18 @@ public class Legit extends Process {
                         TriggerDataCollectionTask triggerDataCollectionTask = new TriggerDataCollectionTask();
                         triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
                         triggerDataCollectionTask.setDestinationHost(destination);
-                        triggerDataCollectionTask.isend(destination);
+                        boolean sent = false;
 
-                        //Don't send them so fast
-                        try {
-                            waitFor(300);
-                        } catch (HostFailureException e) {
-                            System.err.println("LEGIT " + id + " host failed!!");
-                            return;
+                        while (!sent) {
+                            try {
+                                triggerDataCollectionTask.send(destination);
+                                sent = true;
+                            } catch (TransferFailureException e) {
+                                e.printStackTrace();
+                            } catch (HostFailureException e) {
+                                e.printStackTrace();
+                            } catch (TimeoutException e) {
+                            }
                         }
                     }
                 }
@@ -266,11 +270,11 @@ public class Legit extends Process {
                         dataMeasurementTask.setResult(measurement);
                         dataMeasurementTask.setOriginHost(Host.currentHost().getName());
                         dataMeasurementTask.setDestinationHost(destination);
-                        dataMeasurementTask.isend(destination);
+                        dataMeasurementTask.dsend(destination);
 
                         //Don't send them so fast
                         try {
-                            waitFor(300);
+                            waitFor(500);
                         } catch (HostFailureException e) {
                             System.err.println("LEGIT " + id + " host failed!!");
                             return;
@@ -310,11 +314,11 @@ public class Legit extends Process {
                         dataResultTask.setResult(computedMeasurement);
                         dataResultTask.setOriginHost(Host.currentHost().getName());
                         dataResultTask.setDestinationHost(destination);
-                        dataResultTask.isend(destination);
+                        dataResultTask.dsend(destination);
 
                         //Don't send them so fast
                         try {
-                            waitFor(300);
+                            waitFor(500);
                         } catch (HostFailureException e) {
                             System.err.println("LEGIT " + id + " host failed!!");
                             return;
@@ -457,11 +461,11 @@ public class Legit extends Process {
                                 leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
                                 leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
                                 leadershipApplicationTask.setDestinationHost(destination);
-                                leadershipApplicationTask.isend(destination);
+                                leadershipApplicationTask.dsend(destination);
 
                                 //Don't send them so fast
                                 try {
-                                    waitFor(300);
+                                    waitFor(500);
                                 } catch (HostFailureException e) {
                                     System.err.println("LEGIT " + id + " host failed!!");
                                     return;
@@ -550,7 +554,7 @@ public class Legit extends Process {
 
                     //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
                     try {
-                        waitFor(5000);
+                        waitFor(2000);
                     } catch (HostFailureException e) {
                         System.err.println("LEGIT" + id + " host failed!!");
                         return;
@@ -577,11 +581,11 @@ public class Legit extends Process {
                             dataMeasurementTask.setResult(measurement);
                             dataMeasurementTask.setOriginHost(Host.currentHost().getName());
                             dataMeasurementTask.setDestinationHost(destination);
-                            dataMeasurementTask.isend(destination);
+                            dataMeasurementTask.dsend(destination);
 
                             //Don't send them so fast
                             try {
-                                waitFor(300);
+                                waitFor(500);
                             } catch (HostFailureException e) {
                                 System.err.println("LEGIT " + id + " host failed!!");
                                 return;
