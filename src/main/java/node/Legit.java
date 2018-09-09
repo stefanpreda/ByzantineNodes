@@ -12,16 +12,16 @@ import java.util.Random;
 public class Legit extends Process {
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long LEADER_ELECTION_TIMEOUT = 15000;
+    private static final long LEADER_ELECTION_TIMEOUT = 25000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long MEASUREMENT_TIMEOUT = 15000;
+    private static final long MEASUREMENT_TIMEOUT = 25000;
 
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (1m30sec)
-    private static final long MEASUREMENT_INTERVAL = 60000;
+    private static final long MEASUREMENT_INTERVAL = 90000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -96,11 +96,9 @@ public class Legit extends Process {
             //RECEIVE LOOP
             try {
                 task = Task.receive(getHost().getName(), RECEIVE_TIMEOUT);
-            } catch (TransferFailureException e) {
+            } catch (TransferFailureException | HostFailureException e) {
                 System.err.println("Node " + id + " FAILED to transfer data\n" + e.getLocalizedMessage());
-            } catch (HostFailureException e) {
-                System.err.println("Node " + id + " FAILED to transfer data\n" + e.getLocalizedMessage());
-            } catch (TimeoutException e) {
+            } catch (TimeoutException ignored) {
 
             }
 
@@ -238,11 +236,9 @@ public class Legit extends Process {
                             try {
                                 triggerDataCollectionTask.send(destination);
                                 sent = true;
-                            } catch (TransferFailureException e) {
+                            } catch (TransferFailureException | HostFailureException e) {
                                 e.printStackTrace();
-                            } catch (HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException e) {
+                            } catch (TimeoutException ignored) {
                             }
                         }
                     }
@@ -650,16 +646,21 @@ public class Legit extends Process {
     private float computeCommonValue() {
         ArrayList<Integer> legitValues = new ArrayList<>();
 
-        int count = measurementResults.keySet().size();
+        int count = measurementResults.keySet().size() > 0 ? measurementResults.keySet().size() : 1;
         int sum = 0;
 
         for (String host : measurementResults.keySet())
             sum += measurementResults.get(host);
 
-        for (String host : measurementResults.keySet()) {
-            float average = (sum - measurementResults.get(host)) / (count - 1);
-            if ((measurementResults.get(host) - average) < (MEASUREMENT_MAX - MEASUREMENT_MIN))
-                legitValues.add(measurementResults.get(host));
+        if (count > 1) {
+            for (String host : measurementResults.keySet()) {
+                float average = (sum - measurementResults.get(host)) / (count - 1);
+                if ((measurementResults.get(host) - average) < (MEASUREMENT_MAX - MEASUREMENT_MIN))
+                    legitValues.add(measurementResults.get(host));
+            }
+        }
+        else {
+            return computedMeasurement;
         }
 
         count = legitValues.size();

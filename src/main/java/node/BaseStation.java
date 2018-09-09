@@ -3,8 +3,10 @@ package node;
 import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.ActivationTask;
+import task.FinalDataResultTask;
 import task.FinishSimulationTask;
 import task.LeaderSelectionTask;
+import task.TurnOffRequest;
 
 import java.util.HashMap;
 import java.util.Random;
@@ -15,6 +17,9 @@ public class BaseStation extends Process {
     private static final double COMMUNICATION_SIZE = 0.0d;
 
     private static final int MAX_RANK = 1000;
+
+    private static final double RECEIVE_TIMEOUT = 0.8;
+    private static final double SIMULATION_TIMEOUT = 330000;
 
     public BaseStation(Host host, String name, String[] args) {
         super(host, name, args);
@@ -47,11 +52,7 @@ public class BaseStation extends Process {
 
             try {
                 activationTask.send("node_" + i);
-            } catch (TransferFailureException e) {
-                e.printStackTrace();
-            } catch (HostFailureException e) {
-                e.printStackTrace();
-            } catch (TimeoutException e) {
+            } catch (TransferFailureException | HostFailureException | TimeoutException e) {
                 e.printStackTrace();
             }
         }
@@ -70,22 +71,63 @@ public class BaseStation extends Process {
 
             try {
                 activationTask.send("node_" + i);
-            } catch (TransferFailureException e) {
-                e.printStackTrace();
-            } catch (HostFailureException e) {
-                e.printStackTrace();
-            } catch (TimeoutException e) {
+            } catch (TransferFailureException | TimeoutException | HostFailureException e) {
                 e.printStackTrace();
             }
         }
 
-        //Wait for the algorithm to end
-        try {
-            waitFor(330000);
-        } catch (HostFailureException e) {
-            System.err.println("BaseStation host failed!!");
-            return;
+        long startTime = System.currentTimeMillis();
+
+        while (true) {
+
+            Task task = null;
+
+            //RECEIVE LOOP
+            try {
+                task = Task.receive(Host.currentHost().getName(), RECEIVE_TIMEOUT);
+            } catch (TransferFailureException | HostFailureException e) {
+                System.err.println("Node " + id + " FAILED to transfer data\n" + e.getLocalizedMessage());
+            } catch (TimeoutException ignored) {
+
+            }
+
+            if (System.currentTimeMillis() - startTime >= SIMULATION_TIMEOUT)
+                break;
+
+            if (task != null && task instanceof TurnOffRequest) {
+                TurnOffRequest turnOffRequest = (TurnOffRequest)task;
+
+                try {
+                    Host.getByName(turnOffRequest.getName()).off();
+                } catch (HostNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            if (task != null && task instanceof FinalDataResultTask) {
+                FinalDataResultTask finalDataResultTask = (FinalDataResultTask)task;
+
+                System.out.println("BaseStation NODE " + id + " RECEIVED FINAL MEASUREMENT RESULT: "
+                    + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
+
+                //#TODO Send ack message to all
+                //#TODO Wait for leader/measurement dispute messages
+                //#TODO Discard measurement if > threshold + timeout sender, send update leader to wrong nodes if < threashold
+                //#TODO Discard measurement + elect new leader if > threshold, send updated measurement to wrong nodes if < threshold
+
+                System.out.println("BaseStation NODE " + id + " ACCEPTED FINAL MEASUREMENT RESULT: "
+                    + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
+            }
         }
+
+        //Wait for the algorithm to end
+//        try {
+//            waitFor(330000);
+//        } catch (HostFailureException e) {
+//            System.err.println("BaseStation host failed!!");
+//            return;
+//        }
 
         //Send ending task to everyone
         for (int i = 0; i < nodeCount; i++) {
@@ -93,11 +135,7 @@ public class BaseStation extends Process {
 
             try {
                 finishTask.send("node_" + i);
-            } catch (TransferFailureException e) {
-                e.printStackTrace();
-            } catch (HostFailureException e) {
-                e.printStackTrace();
-            } catch (TimeoutException e) {
+            } catch (TransferFailureException | HostFailureException | TimeoutException e) {
                 e.printStackTrace();
             }
         }
