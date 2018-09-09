@@ -1,0 +1,53 @@
+long startTime = System.currentTimeMillis();
+
+        while (true) {
+
+            Task task = null;
+
+            //RECEIVE LOOP
+            try {
+                task = Task.receive(Host.currentHost().getName(), RECEIVE_TIMEOUT);
+            } catch (TransferFailureException e) {
+                System.err.println("Node " + id + " FAILED to transfer data\n" + e.getLocalizedMessage());
+            } catch (HostFailureException e) {
+                System.err.println("Node " + id + " FAILED to transfer data\n" + e.getLocalizedMessage());
+            } catch (TimeoutException e) {
+
+            }
+
+            if (System.currentTimeMillis() - startTime >= SIMULATION_TIMEOUT)
+                break;
+
+            if (task != null && task instanceof TurnOffRequest) {
+                TurnOffRequest turnOffRequest = (TurnOffRequest)task;
+
+                try {
+                    Host.getByName(turnOffRequest.getName()).off();
+                } catch (HostNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+
+
+
+
+if (NODE_FAILS_DURING_PROPOSAL.contains(Host.currentHost().getName())) {
+                        TurnOffRequest turnOffRequest = new TurnOffRequest(Host.currentHost().getName());
+                        try {
+                            turnOffRequest.send(simulationControllerName);
+                        } catch (TransferFailureException e) {
+                            e.printStackTrace();
+                        } catch (HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            waitFor(1000);
+                        } catch (HostFailureException e) {
+                            System.err.println("RingNode " + id + " host failed!!");
+                            return;
+                        }
+                    }
