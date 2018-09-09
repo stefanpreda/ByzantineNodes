@@ -168,7 +168,7 @@ public class Byzantine extends Process {
             if (leadershipSelectionResultStartTimestamp > 0
                     && (System.currentTimeMillis() - leadershipSelectionResultStartTimestamp > LEADER_ELECTION_TIMEOUT)) {
 
-                System.out.println("LEGIT NODE " + id + " FINISHED RECEIVING LEADER RESULTS AND HAS THIS LIST: " + leadershipResults);
+                System.out.println("BYZANTINE NODE " + id + " FINISHED RECEIVING LEADER RESULTS AND HAS THIS LIST: " + leadershipResults);
                 HashMap<String, Integer> voteCounts = new HashMap<>();
                 String newLeader = null;
                 int maxVotes = 0;
@@ -248,7 +248,7 @@ public class Byzantine extends Process {
                 try {
                     waitFor(2000);
                 } catch (HostFailureException e) {
-                    System.err.println("LEGIT" + id + " host failed!!");
+                    System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
                 }
 
@@ -272,7 +272,7 @@ public class Byzantine extends Process {
                         try {
                             waitFor(500);
                         } catch (HostFailureException e) {
-                            System.err.println("LEGIT " + id + " host failed!!");
+                            System.err.println("BYZANTINE " + id + " host failed!!");
                             return;
                         }
                     }
@@ -363,6 +363,22 @@ public class Byzantine extends Process {
                 if (newMeasurement > 0) {
                     currentMeasurement = newMeasurement;
                     System.out.println("BYZANTINE NODE " + id + " UPDATE MEASUREMENT: " + newMeasurement);
+
+                    if (currentLeader.equals(Host.currentHost().getName())) {
+                        FinalDataResultTask finalDataResultTask = new FinalDataResultTask();
+                        finalDataResultTask.setResult(currentMeasurement);
+                        finalDataResultTask.setOriginHost(Host.currentHost().getName());
+                        finalDataResultTask.setDestinationHost(baseStationHostName);
+                        finalDataResultTask.dsend(baseStationHostName);
+
+                        //wait a bit after sending
+                        try {
+                            waitFor(500);
+                        } catch (HostFailureException e) {
+                            System.err.println("BYZANTINE " + id + " host failed!!");
+                            return;
+                        }
+                    }
                 }
                 else {
                     System.out.println("BYZANTINE NODE " + id + " DID NOT RECEIVE ANY MEASUREMENT RESULTS");

@@ -363,6 +363,22 @@ public class Legit extends Process {
                 if (newMeasurement > 0) {
                     currentMeasurement = newMeasurement;
                     System.out.println("LEGIT NODE " + id + " UPDATE MEASUREMENT: " + newMeasurement);
+
+                    if (currentLeader.equals(Host.currentHost().getName())) {
+                        FinalDataResultTask finalDataResultTask = new FinalDataResultTask();
+                        finalDataResultTask.setResult(currentMeasurement);
+                        finalDataResultTask.setOriginHost(Host.currentHost().getName());
+                        finalDataResultTask.setDestinationHost(baseStationHostName);
+                        finalDataResultTask.dsend(baseStationHostName);
+
+                        //wait a bit after sending
+                        try {
+                            waitFor(500);
+                        } catch (HostFailureException e) {
+                            System.err.println("LEGIT " + id + " host failed!!");
+                            return;
+                        }
+                    }
                 }
                 else {
                     System.out.println("LEGIT NODE " + id + " DID NOT RECEIVE ANY MEASUREMENT RESULTS");
