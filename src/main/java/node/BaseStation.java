@@ -19,7 +19,17 @@ public class BaseStation extends Process {
     private static final int MAX_RANK = 1000;
 
     private static final double RECEIVE_TIMEOUT = 0.8;
-    private static final double SIMULATION_TIMEOUT = 330000;
+
+    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
+    private static final double SIMULATION_TIMEOUT = 350000;
+
+    //The time when base station started listening for dispute messages
+    private long disputeWaitStartTime = -1;
+
+    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
+    private static final long DISPUTE_TIMEOUT = 25000;
+
+
 
     public BaseStation(Host host, String name, String[] args) {
         super(host, name, args);
