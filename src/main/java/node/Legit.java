@@ -14,6 +14,9 @@ public class Legit extends Process {
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long LEADER_ELECTION_TIMEOUT = 25000;
 
+    //Leader selection interval in millis (3m30sec)
+    private static final long LEADER_SELECTION_INTERVAL = 210000;
+
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long MEASUREMENT_TIMEOUT = 25000;
 
@@ -40,6 +43,9 @@ public class Legit extends Process {
 
     //Current results held in memory
     private HashMap<String, String> leadershipResults = new HashMap<>();
+
+    //The time when the leader last triggered a leader selection
+    private long lastLeaderSelectionTriggerTime = -1;
 
     //The timestamp when the initial flood with applications began
     private long leadershipSelectionApplicationStartTimestamp = -1;
@@ -101,6 +107,8 @@ public class Legit extends Process {
             } catch (TimeoutException ignored) {
 
             }
+
+            //#TODO Periodically trigger leader selection
 
             //LEADER APPLICATIONS FLOOD ENDED
             if (leadershipSelectionApplicationStartTimestamp > 0
@@ -214,13 +222,15 @@ public class Legit extends Process {
                 //Setup start time for measurement trigger
                 lastMeasurementTriggerTime = System.currentTimeMillis();
 
+                //Reset counter for starting a new leader selection
+                lastLeaderSelectionTriggerTime = System.currentTimeMillis();
+
                 if (task == null || task instanceof LeaderResultTask)
                     continue;
             }
 
-            //Leader triggers measurement periodically only if a leader selection is not in progress
-            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) &&
-                    leadershipSelectionApplicationStartTimestamp < 0 && leadershipSelectionResultStartTimestamp < 0 &&
+            //Leader triggers measurement periodically only if a leader selection/measurement is not in progress
+            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
                     (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
                 lastMeasurementTriggerTime = System.currentTimeMillis();
 
@@ -687,5 +697,14 @@ public class Legit extends Process {
 
         return (float)sum / count;
 
+    }
+
+    private boolean measurementOrElectionInProgress() {
+
+        if (leadershipSelectionApplicationStartTimestamp < 0 && leadershipSelectionResultStartTimestamp < 0 &&
+            measurementFloodStartTime < 0 && measurementFloodResultStartTime < 0)
+            return false;
+
+        return true;
     }
 }

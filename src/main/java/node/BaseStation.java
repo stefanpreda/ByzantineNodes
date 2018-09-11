@@ -21,7 +21,7 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double SIMULATION_TIMEOUT = 350000;
+    private static final double SIMULATION_TIMEOUT = 500000;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
@@ -130,14 +130,6 @@ public class BaseStation extends Process {
                     + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
             }
         }
-
-        //Wait for the algorithm to end
-//        try {
-//            waitFor(330000);
-//        } catch (HostFailureException e) {
-//            System.err.println("BaseStation host failed!!");
-//            return;
-//        }
 
         //Send ending task to everyone
         for (int i = 0; i < nodeCount; i++) {
