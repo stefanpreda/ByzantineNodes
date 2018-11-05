@@ -12,19 +12,19 @@ import java.util.Random;
 public class Legit extends Process {
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long LEADER_ELECTION_TIMEOUT = 25000;
+    private static final long LEADER_ELECTION_TIMEOUT = 45000;
 
     //Leader selection interval in millis (3m30sec)
     private static final long LEADER_SELECTION_INTERVAL = 210000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long MEASUREMENT_TIMEOUT = 25000;
+    private static final long MEASUREMENT_TIMEOUT = 45000;
 
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (1m30sec)
-    private static final long MEASUREMENT_INTERVAL = 90000;
+    private static final long MEASUREMENT_INTERVAL = 60000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -60,7 +60,7 @@ public class Legit extends Process {
     private String computedLeader = null;
 
     //The time when the leader last triggered a measurement
-    private long lastMeasurementTriggerTime = -1;
+    private long lastMeasurementTriggerTime = System.currentTimeMillis();
 
     //The time when the flood with measurement messages started
     private long measurementFloodStartTime =  -1;
@@ -108,7 +108,38 @@ public class Legit extends Process {
 
             }
 
-            //#TODO Periodically trigger leader selection
+            //Leader triggers new leader selection periodically only if a leader selection/measurement is not in progress
+            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
+                (System.currentTimeMillis() - lastLeaderSelectionTriggerTime > LEADER_SELECTION_INTERVAL)) {
+
+                //Flood with LeaderSelectionTask
+                for (String destination : ranks.keySet()) {
+                    if (!destination.equals(Host.currentHost().getName())) {
+                        LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask();
+                        leaderSelectionTask.setOriginHost(Host.currentHost().getName());
+                        leaderSelectionTask.setDestinationHost(destination);
+                        boolean sent = false;
+                        while (!sent) {
+                            try {
+                                leaderSelectionTask.send(destination);
+                                sent = true;
+                            } catch (TransferFailureException | HostFailureException e) {
+                                e.printStackTrace();
+                            } catch (TimeoutException ignored) {
+                            }
+                        }
+                    }
+                }
+
+                leadershipSelectionApplicationStartTimestamp = System.currentTimeMillis();
+                leadershipSelectionResultStartTimestamp = -1;
+                leadershipApplications.clear();
+                leadershipResults.clear();
+                leaderApplicationSent = false;
+                computedLeader = null;
+
+                lastLeaderSelectionTriggerTime = System.currentTimeMillis();
+            }
 
             //LEADER APPLICATIONS FLOOD ENDED
             if (leadershipSelectionApplicationStartTimestamp > 0

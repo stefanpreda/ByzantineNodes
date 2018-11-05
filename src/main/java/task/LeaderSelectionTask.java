@@ -7,6 +7,8 @@ public class LeaderSelectionTask extends Task {
     private String originHost;
     private String destinationHost;
 
+    public LeaderSelectionTask() {}
+
     public LeaderSelectionTask(String originHost, String destinationHost) {
         this.originHost = originHost;
         this.destinationHost = destinationHost;

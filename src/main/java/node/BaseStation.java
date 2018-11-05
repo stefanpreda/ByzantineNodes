@@ -77,10 +77,10 @@ public class BaseStation extends Process {
 
         //Trigger initial leader selection
         for (int i = 0; i < nodeCount; i++) {
-            LeaderSelectionTask activationTask = new LeaderSelectionTask("node_" + id, "node_" + id);
+            LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + id);
 
             try {
-                activationTask.send("node_" + i);
+                leaderSelectionTask.send("node_" + i);
             } catch (TransferFailureException | TimeoutException | HostFailureException e) {
                 e.printStackTrace();
             }
