@@ -21,7 +21,10 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double SIMULATION_TIMEOUT = 500000;
+    private static final double SIMULATION_TIMEOUT = 600000;
+
+    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
+    private static final double LAST_RECEIVE_TIMEOUT = 300000;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
@@ -49,7 +52,7 @@ public class BaseStation extends Process {
 
         //Wait for other nodes to start
         try {
-            waitFor(3000);
+            sleep(3000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
@@ -69,7 +72,7 @@ public class BaseStation extends Process {
 
         //Wait for everyone to do the necessary configurations
         try {
-            waitFor(5000);
+            sleep(5000);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
@@ -77,7 +80,13 @@ public class BaseStation extends Process {
 
         //Trigger initial leader selection
         for (int i = 0; i < nodeCount; i++) {
-            LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + id);
+            LeaderSelectionTask leaderSelectionTask = null;
+            if (i != id) {
+                leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
+            }
+            else {
+                continue;
+            }
 
             try {
                 leaderSelectionTask.send("node_" + i);
@@ -87,6 +96,7 @@ public class BaseStation extends Process {
         }
 
         long startTime = System.currentTimeMillis();
+        long lastMeasurementReceivedTime = System.currentTimeMillis();
 
         while (true) {
 
@@ -104,6 +114,25 @@ public class BaseStation extends Process {
             if (System.currentTimeMillis() - startTime >= SIMULATION_TIMEOUT)
                 break;
 
+            if (System.currentTimeMillis() - lastMeasurementReceivedTime > LAST_RECEIVE_TIMEOUT) {
+                lastMeasurementReceivedTime = System.currentTimeMillis();
+
+                //Flood with LeaderSelectionTask
+                for (int i = 0; i < nodeCount; i++) {
+                    LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
+                    boolean sent = false;
+                    while (!sent) {
+                        try {
+                            leaderSelectionTask.send("node_" + i);
+                            sent = true;
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) {
+                        }
+                    }
+                }
+            }
+
             if (task != null && task instanceof TurnOffRequest) {
                 TurnOffRequest turnOffRequest = (TurnOffRequest)task;
 
@@ -120,6 +149,8 @@ public class BaseStation extends Process {
 
                 System.out.println("BaseStation NODE " + id + " RECEIVED FINAL MEASUREMENT RESULT: "
                     + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
+
+                lastMeasurementReceivedTime = System.currentTimeMillis();
 
                 //#TODO Send ack message to all
                 //#TODO Wait for leader/measurement dispute messages

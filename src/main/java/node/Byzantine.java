@@ -11,11 +11,18 @@ import java.util.Random;
 
 public class Byzantine extends Process {
 
+    // one leader election = 90s
+    // one measurement = 90s
+    // first leader election triggered at start
+    // first measurement = 90s (first election) + 120s + 90s(duration)
+    // successive leader elections = 90s(first) + 350s + 350s + etc
+    // successive measurements = 90s + 120s + 120s + 120s (resets on leader election )
+
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long LEADER_ELECTION_TIMEOUT = 45000;
 
-    //Leader selection interval in millis (3m30sec)
-    private static final long LEADER_SELECTION_INTERVAL = 210000;
+    //Leader selection interval in millis (5m)
+    private static final long LEADER_SELECTION_INTERVAL = 250000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long MEASUREMENT_TIMEOUT = 45000;
@@ -23,8 +30,8 @@ public class Byzantine extends Process {
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
-    //Measurement interval in millis (1m30sec)
-    private static final long MEASUREMENT_INTERVAL = 60000;
+    //Measurement interval in millis (2m)
+    private static final long MEASUREMENT_INTERVAL = 120000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -166,7 +173,7 @@ public class Byzantine extends Process {
 
                 //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
                 try {
-                    waitFor(2000);
+                    sleep(2000);
                 } catch (HostFailureException e) {
                     System.err.println("BaseStation host failed!!");
                     return;
@@ -187,7 +194,7 @@ public class Byzantine extends Process {
 
                             //Don't send them too fast
                             try {
-                                waitFor(500);
+                                sleep(500);
                             } catch (HostFailureException e) {
                                 System.err.println("BYZANTINE " + id + " host failed!!");
                                 return;
@@ -262,7 +269,7 @@ public class Byzantine extends Process {
 
             //Leader triggers measurement periodically only if a leader selection/measurement is not in progress
             if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
-                    (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
+                    (System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
                 lastMeasurementTriggerTime = System.currentTimeMillis();
 
                 //Flood with measurement trigger messages
@@ -287,7 +294,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts receive the trigger message
                 try {
-                    waitFor(2000);
+                    sleep(2000);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -311,7 +318,7 @@ public class Byzantine extends Process {
 
                         //Don't send them so fast
                         try {
-                            waitFor(500);
+                            sleep(500);
                         } catch (HostFailureException e) {
                             System.err.println("BYZANTINE " + id + " host failed!!");
                             return;
@@ -333,7 +340,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts finish computing
                 try {
-                    waitFor(2000);
+                    sleep(2000);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -355,7 +362,7 @@ public class Byzantine extends Process {
 
                         //Don't send them so fast
                         try {
-                            waitFor(500);
+                            sleep(500);
                         } catch (HostFailureException e) {
                             System.err.println("BYZANTINE " + id + " host failed!!");
                             return;
@@ -414,7 +421,7 @@ public class Byzantine extends Process {
 
                         //wait a bit after sending
                         try {
-                            waitFor(500);
+                            sleep(500);
                         } catch (HostFailureException e) {
                             System.err.println("BYZANTINE " + id + " host failed!!");
                             return;
@@ -475,7 +482,7 @@ public class Byzantine extends Process {
 
                     //Wait a bit for all nodes to receive the leader selection message #TODO Wait time based on number of nodes
                     try {
-                        waitFor(2000);
+                        sleep(2000);
                     } catch (HostFailureException e) {
                         System.err.println("BaseStation host failed!!");
                         return;
@@ -499,6 +506,8 @@ public class Byzantine extends Process {
                         computedLeader = null;
                     }
 
+                    lastLeaderSelectionTriggerTime = System.currentTimeMillis();
+
                     //Flood with applications only if not the current leader and did not flood already
                     if (currentLeader == null ||
                             (!currentLeader.equals(Host.currentHost().getName()) && !leaderApplicationSent)) {
@@ -517,7 +526,7 @@ public class Byzantine extends Process {
 
                                     //Don't send them so fast
                                     try {
-                                        waitFor(500);
+                                        sleep(500);
                                     } catch (HostFailureException e) {
                                         System.err.println("BYZANTINE " + id + " host failed!!");
                                         return;
@@ -606,7 +615,7 @@ public class Byzantine extends Process {
 
                     //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
                     try {
-                        waitFor(2000);
+                        sleep(2000);
                     } catch (HostFailureException e) {
                         System.err.println("BYZANTINE" + id + " host failed!!");
                         return;
@@ -637,7 +646,7 @@ public class Byzantine extends Process {
 
                             //Don't send them so fast
                             try {
-                                waitFor(500);
+                                sleep(500);
                             } catch (HostFailureException e) {
                                 System.err.println("BYZANTINE " + id + " host failed!!");
                                 return;

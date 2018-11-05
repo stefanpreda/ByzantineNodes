@@ -45,7 +45,7 @@ if (NODE_FAILS_DURING_PROPOSAL.contains(Host.currentHost().getName())) {
                             e.printStackTrace();
                         }
                         try {
-                            waitFor(1000);
+                            sleep(1000);
                         } catch (HostFailureException e) {
                             System.err.println("RingNode " + id + " host failed!!");
                             return;
