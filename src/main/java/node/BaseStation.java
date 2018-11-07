@@ -3,6 +3,7 @@ package node;
 import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.ActivationTask;
+import task.DataAckTask;
 import task.FinalDataResultTask;
 import task.FinishSimulationTask;
 import task.LeaderSelectionTask;
@@ -24,7 +25,7 @@ public class BaseStation extends Process {
     private static final double SIMULATION_TIMEOUT = 600000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double LAST_RECEIVE_TIMEOUT = 300000;
+    private static final double LAST_RECEIVE_TIMEOUT = 100000;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
@@ -152,9 +153,27 @@ public class BaseStation extends Process {
 
                 lastMeasurementReceivedTime = System.currentTimeMillis();
 
-                //#TODO Send ack message to all
+                //Flood with DataAckTask
+                for (int i = 0; i < nodeCount; i++) {
+                    DataAckTask dataAckTask = new DataAckTask();
+                    dataAckTask.setOriginHost("node_" + id);
+                    dataAckTask.setDestinationHost("node_" + i);
+                    dataAckTask.setResult(finalDataResultTask.getResult());
+
+                    boolean sent = false;
+                    while (!sent) {
+                        try {
+                            dataAckTask.send("node_" + i);
+                            sent = true;
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) {
+                        }
+                    }
+                }
+
                 //#TODO Wait for leader/measurement dispute messages
-                //#TODO Discard measurement if > threshold + timeout sender, send update leader to wrong nodes if < threashold
+                //#TODO Discard measurement if > threshold + timeout sender (not to spam the base station), send update leader to wrong nodes if < threashold
                 //#TODO Discard measurement + elect new leader if > threshold, send updated measurement to wrong nodes if < threshold
 
                 System.out.println("BaseStation NODE " + id + " ACCEPTED FINAL MEASUREMENT RESULT: "

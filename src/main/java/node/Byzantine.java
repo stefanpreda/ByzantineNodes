@@ -11,27 +11,27 @@ import java.util.Random;
 
 public class Byzantine extends Process {
 
-    // one leader election = 90s
-    // one measurement = 90s
+    // one leader election = 20s
+    // one measurement = 20s
     // first leader election triggered at start
-    // first measurement = 90s (first election) + 120s + 90s(duration)
-    // successive leader elections = 90s(first) + 350s + 350s + etc
-    // successive measurements = 90s + 120s + 120s + 120s (resets on leader election )
+    // first measurement = 20s (first election) + 40s + 20s(duration)
+    // successive leader elections = 20s(first) + 80s + 80s + etc
+    // successive measurements = 20s + 40s + 40s + 40s (resets on leader election )
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long LEADER_ELECTION_TIMEOUT = 45000;
+    private static final long LEADER_ELECTION_TIMEOUT = 10000;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 250000;
+    private static final long LEADER_SELECTION_INTERVAL = 80000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long MEASUREMENT_TIMEOUT = 45000;
+    private static final long MEASUREMENT_TIMEOUT = 10000;
 
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
-    private static final long MEASUREMENT_INTERVAL = 120000;
+    private static final long MEASUREMENT_INTERVAL = 40000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -340,7 +340,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts finish computing
                 try {
-                    sleep(2000);
+                    sleep(4000);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -350,6 +350,7 @@ public class Byzantine extends Process {
                 measurementFloodStartTime = -1;
                 measurementResults.clear();
                 measurementFinalResults.clear();
+
 
                 //Flood with common measurement
                 for (String destination : ranks.keySet()) {
@@ -695,6 +696,26 @@ public class Byzantine extends Process {
                         System.out.println("BYZANTINE NODE " + id + " RECEIVED DUPLICATE MEASUREMENT RESULT TASK FROM " +
                                 dataResultTask.getOriginHost());
                     }
+                }
+
+                if (task instanceof DataAckTask) {
+                    DataAckTask dataAckTask = (DataAckTask) task;
+                    boolean valid = false;
+
+                    //Check if the message came from the base station
+                    //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
+                    if (dataAckTask.getOriginHost().equals(baseStationHostName)) {
+                        System.out.println("LEGIT NODE " + id + " RECEIVED DATA ACK TASK FROM BASE STATION");
+                    }
+                    else {
+                        continue;
+                    }
+
+                    if (dataAckTask.getLeader() != currentLeader || dataAckTask.getResult() != currentMeasurement) {
+                        //#TODO Send dispute message (include leader)
+                    }
+
+
                 }
 
             }
