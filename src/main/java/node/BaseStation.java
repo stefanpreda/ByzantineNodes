@@ -299,7 +299,7 @@ public class BaseStation extends Process {
                         dataDisputeTask.getOriginHost());
                 }
                 else {
-                    System.out.println("BaseStation NODE " + id + " RECEIVED DUPLICATE RESULT DISPUTE TASK FROM " +
+                    System.out.println("BaseStation NODE " + id + " RECEIVED INVALID DISPUTE TASK FROM " +
                         dataDisputeTask.getOriginHost());
                 }
             }
