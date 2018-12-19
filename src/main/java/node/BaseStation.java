@@ -35,7 +35,7 @@ public class BaseStation extends Process {
 
     private String currentLeader = null;
     private float currentMeasurement = -1;
-    private ArrayList<String> disputingNodes = new ArrayList<>();
+    private ArrayList<String> disputingLeaderNodes = new ArrayList<>();
     private ArrayList<String> disputingMeasurementNodes = new ArrayList<>();
     private HashMap<String, Long> timeoutNodes = new HashMap<>();
 
@@ -146,29 +146,27 @@ public class BaseStation extends Process {
             }
 
             if (disputeWaitStartTime > 0 && System.currentTimeMillis() - disputeWaitStartTime > DISPUTE_TIMEOUT) {
-                if (disputingNodes.size() >= nodeCount / 2) {
+                if (disputingLeaderNodes.size() >= nodeCount / 2) {
                     System.out.println("BaseStation NODE " + id + " REJECTED FINAL MEASUREMENT RESULT: "
                         + currentMeasurement + " FROM NODE " + currentLeader);
 
                     //Timeout the malfunctioning leader
                     timeoutNodes.put(currentLeader, System.currentTimeMillis());
+                }
+                else if (disputingMeasurementNodes.size() > nodeCount / 2) {
+                    lastMeasurementReceivedTime = System.currentTimeMillis();
 
-                    //Trigger leader election only if the current leader is sending erroneous data
-                    if (disputingMeasurementNodes.size() > nodeCount / 2) {
-                        lastMeasurementReceivedTime = System.currentTimeMillis();
-
-                        //Flood with LeaderSelectionTask
-                        for (int i = 0; i < nodeCount; i++) {
-                            LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-                            boolean sent = false;
-                            while (!sent) {
-                                try {
-                                    leaderSelectionTask.send("node_" + i);
-                                    sent = true;
-                                } catch (TransferFailureException | HostFailureException e) {
-                                    e.printStackTrace();
-                                } catch (TimeoutException ignored) {
-                                }
+                    //Flood with LeaderSelectionTask
+                    for (int i = 0; i < nodeCount; i++) {
+                        LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
+                        boolean sent = false;
+                        while (!sent) {
+                            try {
+                                leaderSelectionTask.send("node_" + i);
+                                sent = true;
+                            } catch (TransferFailureException | HostFailureException e) {
+                                e.printStackTrace();
+                            } catch (TimeoutException ignored) {
                             }
                         }
                     }
@@ -177,7 +175,26 @@ public class BaseStation extends Process {
                     System.out.println("BaseStation NODE " + id + " ACCEPTED FINAL MEASUREMENT RESULT: "
                         + currentMeasurement + " FROM NODE " + currentLeader);
 
-                    for (String disputingNode : disputingNodes) {
+                    for (String disputingNode : disputingLeaderNodes) {
+                        ReadjustmentTask readjustmentTask = new ReadjustmentTask();
+                        readjustmentTask.setResult(currentMeasurement);
+                        readjustmentTask.setLeader(currentLeader);
+                        readjustmentTask.setOriginHost("node_" + id);
+                        readjustmentTask.setDestinationHost(disputingNode);
+
+                        boolean sent = false;
+                        while (!sent) {
+                            try {
+                                readjustmentTask.send(disputingNode);
+                                sent = true;
+                            } catch (TransferFailureException | HostFailureException e) {
+                                e.printStackTrace();
+                            } catch (TimeoutException ignored) {
+                            }
+                        }
+                    }
+
+                    for (String disputingNode : disputingMeasurementNodes) {
                         ReadjustmentTask readjustmentTask = new ReadjustmentTask();
                         readjustmentTask.setResult(currentMeasurement);
                         readjustmentTask.setLeader(currentLeader);
@@ -200,7 +217,7 @@ public class BaseStation extends Process {
                 disputeWaitStartTime = -1;
                 currentLeader = null;
                 currentMeasurement = -1;
-                disputingNodes.clear();
+                disputingLeaderNodes.clear();
                 disputingMeasurementNodes.clear();
             }
 
@@ -256,7 +273,7 @@ public class BaseStation extends Process {
                 disputeWaitStartTime = System.currentTimeMillis();
                 currentLeader = finalDataResultTask.getOriginHost();
                 currentMeasurement = finalDataResultTask.getResult();
-                disputingNodes.clear();
+                disputingLeaderNodes.clear();
                 disputingMeasurementNodes.clear();
             }
 
@@ -268,16 +285,16 @@ public class BaseStation extends Process {
                     continue;
 
                 //Accept only one result from each host
-                if (!disputingNodes.contains(dataDisputeTask.getOriginHost())) {
-                    if (Math.abs(currentMeasurement - dataDisputeTask.getResult()) > 0.01 ||
-                        !dataDisputeTask.getLeader().equals(currentLeader))
-                            disputingNodes.add(dataDisputeTask.getOriginHost());
+                if (!disputingLeaderNodes.contains(dataDisputeTask.getOriginHost()) &&
+                        !dataDisputeTask.getLeader().equals(currentLeader)) {
 
-                    // Note which nodes don't agree on the measurement
-                    if (!disputingMeasurementNodes.contains(dataDisputeTask.getOriginHost()) &&
-                        Math.abs(currentMeasurement - dataDisputeTask.getResult()) > 0.01)
-                            disputingMeasurementNodes.add(dataDisputeTask.getOriginHost());
-
+                    disputingLeaderNodes.add(dataDisputeTask.getOriginHost());
+                    System.out.println("BaseStation NODE " + id + " RECEIVED LEADER DISPUTE TASK FROM " +
+                        dataDisputeTask.getOriginHost());
+                }
+                else if (!disputingMeasurementNodes.contains(dataDisputeTask.getOriginHost()) &&
+                        Math.abs(currentMeasurement - dataDisputeTask.getResult()) > 0.01) {
+                    disputingMeasurementNodes.add(dataDisputeTask.getOriginHost());
                     System.out.println("BaseStation NODE " + id + " RECEIVED RESULT DISPUTE TASK FROM " +
                         dataDisputeTask.getOriginHost());
                 }
