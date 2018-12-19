@@ -14,15 +14,15 @@ public class Byzantine extends Process {
     // one leader election = 20s
     // one measurement = 20s
     // first leader election triggered at start
-    // first measurement = 20s (first election) + 40s + 20s(duration)
-    // successive leader elections = 20s(first) + 100s + 100s + etc
-    // successive measurements = 20s + 40s + 40s + 40s (resets on leader election )
+    // first measurement = 20s (first election) + 50s + 30s(duration)
+    // successive leader elections = 20s(first) + 140s + 140s + etc
+    // successive measurements = 20s + 50s + 50s + 50s (resets on leader election )
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long LEADER_ELECTION_TIMEOUT = 10000;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 100000;
+    private static final long LEADER_SELECTION_INTERVAL = 140000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long MEASUREMENT_TIMEOUT = 10000;
@@ -31,7 +31,7 @@ public class Byzantine extends Process {
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
-    private static final long MEASUREMENT_INTERVAL = 40000;
+    private static final long MEASUREMENT_INTERVAL = 50000;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -173,7 +173,7 @@ public class Byzantine extends Process {
 
                 //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
                 try {
-                    sleep(2000);
+                    sleep(4000);
                 } catch (HostFailureException e) {
                     System.err.println("BaseStation host failed!!");
                     return;
@@ -294,7 +294,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts receive the trigger message
                 try {
-                    sleep(2000);
+                    sleep(4000);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -483,7 +483,7 @@ public class Byzantine extends Process {
 
                     //Wait a bit for all nodes to receive the leader selection message #TODO Wait time based on number of nodes
                     try {
-                        sleep(2000);
+                        sleep(4000);
                     } catch (HostFailureException e) {
                         System.err.println("BaseStation host failed!!");
                         return;
@@ -616,7 +616,7 @@ public class Byzantine extends Process {
 
                     //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
                     try {
-                        sleep(2000);
+                        sleep(4000);
                     } catch (HostFailureException e) {
                         System.err.println("BYZANTINE" + id + " host failed!!");
                         return;
@@ -700,7 +700,6 @@ public class Byzantine extends Process {
 
                 if (task instanceof DataAckTask) {
                     DataAckTask dataAckTask = (DataAckTask) task;
-                    boolean valid = false;
 
                     //Check if the message came from the base station
                     //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
@@ -711,7 +710,7 @@ public class Byzantine extends Process {
                         continue;
                     }
 
-                    if (dataAckTask.getLeader() != currentLeader || dataAckTask.getResult() != currentMeasurement) {
+                    if (!dataAckTask.getLeader().equals(currentLeader) || Math.abs(dataAckTask.getResult() - currentMeasurement) > 0.01) {
                         DataDisputeTask dataDisputeTask = new DataDisputeTask();
                         dataDisputeTask.setResult(currentMeasurement);
                         dataDisputeTask.setLeader(currentLeader);

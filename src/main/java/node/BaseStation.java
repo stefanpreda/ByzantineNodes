@@ -25,7 +25,7 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double SIMULATION_TIMEOUT = 600000;
+    private static final double SIMULATION_TIMEOUT = 300000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final double LAST_RECEIVE_TIMEOUT = 120000;
@@ -121,8 +121,10 @@ public class BaseStation extends Process {
 
             }
 
-            if (System.currentTimeMillis() - startTime >= SIMULATION_TIMEOUT)
+            if (System.currentTimeMillis() - startTime >= SIMULATION_TIMEOUT) {
+                System.out.println("SIMULATION ENDING, BASE STATION NO LONGER LISTENING");
                 break;
+            }
 
             if (System.currentTimeMillis() - lastMeasurementReceivedTime > LAST_RECEIVE_TIMEOUT) {
                 lastMeasurementReceivedTime = System.currentTimeMillis();
@@ -237,6 +239,7 @@ public class BaseStation extends Process {
                     dataAckTask.setOriginHost("node_" + id);
                     dataAckTask.setDestinationHost("node_" + i);
                     dataAckTask.setResult(finalDataResultTask.getResult());
+                    dataAckTask.setLeader(finalDataResultTask.getOriginHost());
 
                     boolean sent = false;
                     while (!sent) {
@@ -270,7 +273,7 @@ public class BaseStation extends Process {
 
                     // Note which nodes don't agree on the measurement
                     if (!disputingMeasurementNodes.contains(dataDisputeTask.getOriginHost()) &&
-                        currentMeasurement != dataDisputeTask.getResult())
+                        Math.abs(currentMeasurement - dataDisputeTask.getResult()) <= 0.01)
                             disputingMeasurementNodes.add(dataDisputeTask.getOriginHost());
 
                     System.out.println("BaseStation NODE " + id + " RECEIVED RESULT DISPUTE TASK FROM " +
