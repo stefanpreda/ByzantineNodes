@@ -239,7 +239,7 @@ public class BaseStation extends Process {
                     + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
 
                 //Check if node is still in timeout
-                if (timeoutNodes.containsKey(finalDataResultTask.getDestinationHost())) {
+                if (timeoutNodes.containsKey(finalDataResultTask.getOriginHost())) {
                     if (System.currentTimeMillis() - timeoutNodes.get(finalDataResultTask.getOriginHost()) > BYZANTINE_TIMEOUT)
                         timeoutNodes.remove(finalDataResultTask.getOriginHost());
                     else {
