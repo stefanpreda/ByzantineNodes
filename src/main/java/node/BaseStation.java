@@ -269,11 +269,13 @@ public class BaseStation extends Process {
 
                 //Accept only one result from each host
                 if (!disputingNodes.contains(dataDisputeTask.getOriginHost())) {
-                    disputingNodes.add(dataDisputeTask.getOriginHost());
+                    if (Math.abs(currentMeasurement - dataDisputeTask.getResult()) > 0.01 ||
+                        !dataDisputeTask.getLeader().equals(currentLeader))
+                            disputingNodes.add(dataDisputeTask.getOriginHost());
 
                     // Note which nodes don't agree on the measurement
                     if (!disputingMeasurementNodes.contains(dataDisputeTask.getOriginHost()) &&
-                        Math.abs(currentMeasurement - dataDisputeTask.getResult()) <= 0.01)
+                        Math.abs(currentMeasurement - dataDisputeTask.getResult()) > 0.01)
                             disputingMeasurementNodes.add(dataDisputeTask.getOriginHost());
 
                     System.out.println("BaseStation NODE " + id + " RECEIVED RESULT DISPUTE TASK FROM " +
