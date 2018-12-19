@@ -4,11 +4,14 @@ import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.ActivationTask;
 import task.DataAckTask;
+import task.DataDisputeTask;
 import task.FinalDataResultTask;
 import task.FinishSimulationTask;
 import task.LeaderSelectionTask;
+import task.ReadjustmentTask;
 import task.TurnOffRequest;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -25,15 +28,21 @@ public class BaseStation extends Process {
     private static final double SIMULATION_TIMEOUT = 600000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double LAST_RECEIVE_TIMEOUT = 100000;
+    private static final double LAST_RECEIVE_TIMEOUT = 120000;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
 
+    private String currentLeader = null;
+    private float currentMeasurement = -1;
+    private ArrayList<String> disputingNodes = new ArrayList<>();
+    private ArrayList<String> disputingMeasurementNodes = new ArrayList<>();
+    private HashMap<String, Long> timeoutNodes = new HashMap<>();
+
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long DISPUTE_TIMEOUT = 25000;
+    private static final long DISPUTE_TIMEOUT = 10000;
 
-
+    private static final long BYZANTINE_TIMEOUT = 100000;
 
     public BaseStation(Host host, String name, String[] args) {
         super(host, name, args);
@@ -134,6 +143,65 @@ public class BaseStation extends Process {
                 }
             }
 
+            if (disputeWaitStartTime > 0 && System.currentTimeMillis() - disputeWaitStartTime > DISPUTE_TIMEOUT) {
+                if (disputingNodes.size() >= nodeCount / 2) {
+                    System.out.println("BaseStation NODE " + id + " REJECTED FINAL MEASUREMENT RESULT: "
+                        + currentMeasurement + " FROM NODE " + currentLeader);
+
+                    //Timeout the malfunctioning leader
+                    timeoutNodes.put(currentLeader, System.currentTimeMillis());
+
+                    //Trigger leader election only if the current leader is sending erroneous data
+                    if (disputingMeasurementNodes.size() > nodeCount / 2) {
+                        lastMeasurementReceivedTime = System.currentTimeMillis();
+
+                        //Flood with LeaderSelectionTask
+                        for (int i = 0; i < nodeCount; i++) {
+                            LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
+                            boolean sent = false;
+                            while (!sent) {
+                                try {
+                                    leaderSelectionTask.send("node_" + i);
+                                    sent = true;
+                                } catch (TransferFailureException | HostFailureException e) {
+                                    e.printStackTrace();
+                                } catch (TimeoutException ignored) {
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    System.out.println("BaseStation NODE " + id + " ACCEPTED FINAL MEASUREMENT RESULT: "
+                        + currentMeasurement + " FROM NODE " + currentLeader);
+
+                    for (String disputingNode : disputingNodes) {
+                        ReadjustmentTask readjustmentTask = new ReadjustmentTask();
+                        readjustmentTask.setResult(currentMeasurement);
+                        readjustmentTask.setLeader(currentLeader);
+                        readjustmentTask.setOriginHost("node_" + id);
+                        readjustmentTask.setDestinationHost(disputingNode);
+
+                        boolean sent = false;
+                        while (!sent) {
+                            try {
+                                readjustmentTask.send(disputingNode);
+                                sent = true;
+                            } catch (TransferFailureException | HostFailureException e) {
+                                e.printStackTrace();
+                            } catch (TimeoutException ignored) {
+                            }
+                        }
+                    }
+                }
+
+                disputeWaitStartTime = -1;
+                currentLeader = null;
+                currentMeasurement = -1;
+                disputingNodes.clear();
+                disputingMeasurementNodes.clear();
+            }
+
             if (task != null && task instanceof TurnOffRequest) {
                 TurnOffRequest turnOffRequest = (TurnOffRequest)task;
 
@@ -150,6 +218,16 @@ public class BaseStation extends Process {
 
                 System.out.println("BaseStation NODE " + id + " RECEIVED FINAL MEASUREMENT RESULT: "
                     + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
+
+                //Check if node is still in timeout
+                if (timeoutNodes.containsKey(finalDataResultTask.getDestinationHost())) {
+                    if (System.currentTimeMillis() - timeoutNodes.get(finalDataResultTask.getOriginHost()) > BYZANTINE_TIMEOUT)
+                        timeoutNodes.remove(finalDataResultTask.getOriginHost());
+                    else {
+                        System.out.println("BaseStation NODE " + id + " IGNORED MEASUREMENT DUE TO NODE TIMEOUT");
+                        continue;
+                    }
+                }
 
                 lastMeasurementReceivedTime = System.currentTimeMillis();
 
@@ -172,12 +250,36 @@ public class BaseStation extends Process {
                     }
                 }
 
-                //#TODO Wait for leader/measurement dispute messages
-                //#TODO Discard measurement if > threshold + timeout sender (not to spam the base station), send update leader to wrong nodes if < threashold
-                //#TODO Discard measurement + elect new leader if > threshold, send updated measurement to wrong nodes if < threshold
+                disputeWaitStartTime = System.currentTimeMillis();
+                currentLeader = finalDataResultTask.getOriginHost();
+                currentMeasurement = finalDataResultTask.getResult();
+                disputingNodes.clear();
+                disputingMeasurementNodes.clear();
+            }
 
-                System.out.println("BaseStation NODE " + id + " ACCEPTED FINAL MEASUREMENT RESULT: "
-                    + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
+            if (task != null && task instanceof DataDisputeTask) {
+                DataDisputeTask dataDisputeTask = (DataDisputeTask) task;
+
+                //Received measurement result without a measurement computation triggered
+                if (disputeWaitStartTime < 0)
+                    continue;
+
+                //Accept only one result from each host
+                if (!disputingNodes.contains(dataDisputeTask.getOriginHost())) {
+                    disputingNodes.add(dataDisputeTask.getOriginHost());
+
+                    // Note which nodes don't agree on the measurement
+                    if (!disputingMeasurementNodes.contains(dataDisputeTask.getOriginHost()) &&
+                        currentMeasurement != dataDisputeTask.getResult())
+                            disputingMeasurementNodes.add(dataDisputeTask.getOriginHost());
+
+                    System.out.println("BaseStation NODE " + id + " RECEIVED RESULT DISPUTE TASK FROM " +
+                        dataDisputeTask.getOriginHost());
+                }
+                else {
+                    System.out.println("BaseStation NODE " + id + " RECEIVED DUPLICATE RESULT DISPUTE TASK FROM " +
+                        dataDisputeTask.getOriginHost());
+                }
             }
         }
 

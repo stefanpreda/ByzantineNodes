@@ -15,14 +15,14 @@ public class Legit extends Process {
     // one measurement = 20s
     // first leader election triggered at start
     // first measurement = 20s (first election) + 40s + 20s(duration)
-    // successive leader elections = 20s(first) + 80s + 80s + etc
+    // successive leader elections = 20s(first) + 100s + 100s + etc
     // successive measurements = 20s + 40s + 40s + 40s (resets on leader election )
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long LEADER_ELECTION_TIMEOUT = 10000;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 80000;
+    private static final long LEADER_SELECTION_INTERVAL = 100000;
 
     //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
     private static final long MEASUREMENT_TIMEOUT = 10000;
@@ -700,7 +700,6 @@ public class Legit extends Process {
 
                 if (task instanceof DataAckTask) {
                     DataAckTask dataAckTask = (DataAckTask) task;
-                    boolean valid = false;
 
                     //Check if the message came from the base station
                     //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
@@ -710,11 +709,32 @@ public class Legit extends Process {
                     else {
                         continue;
                     }
-                    
+
                     if (dataAckTask.getLeader() != currentLeader || dataAckTask.getResult() != currentMeasurement) {
-                        //#TODO Send dispute message (include leader)
+                        DataDisputeTask dataDisputeTask = new DataDisputeTask();
+                        dataDisputeTask.setResult(currentMeasurement);
+                        dataDisputeTask.setLeader(currentLeader);
+                        dataDisputeTask.setOriginHost(Host.currentHost().getName());
+                        dataDisputeTask.setDestinationHost(baseStationHostName);
+                        dataDisputeTask.dsend(baseStationHostName);
+                    }
+                }
+
+                if (task instanceof ReadjustmentTask) {
+                    ReadjustmentTask readjustmentTask = (ReadjustmentTask) task;
+
+                    //Check if the message came from the base station
+                    //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
+                    if (readjustmentTask.getOriginHost().equals(baseStationHostName)) {
+                        System.out.println("LEGIT NODE " + id + " RECEIVED READJUSTMENT TASK FROM BASE STATION" +
+                            " WITH LEADER: " + readjustmentTask.getLeader() + " MEASUREMENT: " + readjustmentTask.getResult());
+                    }
+                    else {
+                        continue;
                     }
 
+                    currentMeasurement = readjustmentTask.getResult();
+                    currentLeader = readjustmentTask.getLeader();
                 }
             }
         }
