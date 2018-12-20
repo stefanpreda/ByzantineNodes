@@ -18,20 +18,25 @@ public class Byzantine extends Process {
     // successive leader elections = 20s(first) + 140s + 140s + etc
     // successive measurements = 20s + 50s + 50s + 50s (resets on leader election )
 
-    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long LEADER_ELECTION_TIMEOUT = 10000;
+    private static final int NODE_COUNT = 10;
+
+    //Higher than the highest possible rank
+    private static final int ROLLING_RANK_VALUE = 1000;
+
+    //In millis
+    private static final long LEADER_ELECTION_TIMEOUT = 1000 * NODE_COUNT;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 140000;
+    private static final long LEADER_SELECTION_INTERVAL = 14000 * NODE_COUNT;
 
-    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long MEASUREMENT_TIMEOUT = 10000;
+    //In millis
+    private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
 
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
-    private static final long MEASUREMENT_INTERVAL = 50000;
+    private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -171,9 +176,9 @@ public class Byzantine extends Process {
                 leadershipApplications.clear();
                 leaderApplicationSent = false;
 
-                //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
+                //Wait a bit for all nodes to receive the trigger message
                 try {
-                    sleep(4000);
+                    sleep(400 * NODE_COUNT);
                 } catch (HostFailureException e) {
                     System.err.println("BaseStation host failed!!");
                     return;
@@ -239,8 +244,7 @@ public class Byzantine extends Process {
                 if (newLeader != null) {
                     if (currentLeader != null) {
                         int oldRank = ranks.get(currentLeader);
-                        //#TODO CREATE CONSTANT, 1000 should be higher than the max possible rank of a node
-                        ranks.put(currentLeader, oldRank - 1000);
+                        ranks.put(currentLeader, oldRank - ROLLING_RANK_VALUE);
                     }
                     currentLeader = newLeader;
                     System.out.println("BYZANTINE NODE " + id + " UPDATE LEADER: " + newLeader);
@@ -294,7 +298,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts receive the trigger message
                 try {
-                    sleep(4000);
+                    sleep(400 * NODE_COUNT);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -340,7 +344,7 @@ public class Byzantine extends Process {
 
                 //Wait for a while so all hosts finish computing
                 try {
-                    sleep(4000);
+                    sleep(400 * NODE_COUNT);
                 } catch (HostFailureException e) {
                     System.err.println("BYZANTINE" + id + " host failed!!");
                     return;
@@ -481,9 +485,9 @@ public class Byzantine extends Process {
                     if (!valid)
                         continue;
 
-                    //Wait a bit for all nodes to receive the leader selection message #TODO Wait time based on number of nodes
+                    //Wait a bit for all nodes to receive the leader selection message
                     try {
-                        sleep(4000);
+                        sleep(400 * NODE_COUNT);
                     } catch (HostFailureException e) {
                         System.err.println("BaseStation host failed!!");
                         return;
@@ -614,9 +618,9 @@ public class Byzantine extends Process {
                     System.out.println("BYZANTINE NODE " + id + " RECEIVED MEASUREMENT TRIGGER TASK FROM " +
                             triggerDataCollectionTask.getOriginHost());
 
-                    //Wait a bit for all nodes to receive the trigger message #TODO Wait time based on number of nodes
+                    //Wait a bit for all nodes to receive the trigger message
                     try {
-                        sleep(4000);
+                        sleep(400 * NODE_COUNT);
                     } catch (HostFailureException e) {
                         System.err.println("BYZANTINE" + id + " host failed!!");
                         return;

@@ -20,15 +20,17 @@ public class BaseStation extends Process {
     private static final double COMPUTE_SIZE = 0.0d;
     private static final double COMMUNICATION_SIZE = 0.0d;
 
+    private static final int NODE_COUNT = 10;
+
     private static final int MAX_RANK = 1000;
 
     private static final double RECEIVE_TIMEOUT = 0.8;
 
-    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double SIMULATION_TIMEOUT = 300000;
+    //In millis
+    private static final double SIMULATION_TIMEOUT = 30000 * NODE_COUNT;
 
-    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final double LAST_RECEIVE_TIMEOUT = 120000;
+    //In millis
+    private static final double LAST_RECEIVE_TIMEOUT = 12000 * NODE_COUNT;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
@@ -39,10 +41,10 @@ public class BaseStation extends Process {
     private ArrayList<String> disputingMeasurementNodes = new ArrayList<>();
     private HashMap<String, Long> timeoutNodes = new HashMap<>();
 
-    //In millis #TODO MAYBE COMPUTE IT BASED ON THE NUMBER OF HOSTS
-    private static final long DISPUTE_TIMEOUT = 10000;
+    //In millis
+    private static final long DISPUTE_TIMEOUT = 1000 * NODE_COUNT;
 
-    private static final long BYZANTINE_TIMEOUT = 100000;
+    private static final long BYZANTINE_TIMEOUT = 10000 * NODE_COUNT;
 
     public BaseStation(Host host, String name, String[] args) {
         super(host, name, args);
@@ -62,7 +64,7 @@ public class BaseStation extends Process {
 
         //Wait for other nodes to start
         try {
-            sleep(3000);
+            sleep(300 * NODE_COUNT);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
@@ -82,7 +84,7 @@ public class BaseStation extends Process {
 
         //Wait for everyone to do the necessary configurations
         try {
-            sleep(5000);
+            sleep(500 * NODE_COUNT);
         } catch (HostFailureException e) {
             System.err.println("BaseStation host failed!!");
             return;
