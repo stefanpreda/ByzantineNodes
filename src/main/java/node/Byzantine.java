@@ -5,8 +5,10 @@ import org.simgrid.msg.Process;
 import task.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 
 public class Byzantine extends Process {
@@ -91,6 +93,57 @@ public class Byzantine extends Process {
 
     //Current measurement all nodes agreed upon
     private float currentMeasurement = -1.0f;
+
+    //Byzantine Behaviour flags
+    private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
+    private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
+    private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
+    private boolean currentLeaderDiesOnNewLeaderSelection = false;
+    private Float differentValueSentToBaseStation = 0.0f;
+    private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
+        this.put("node_8", 10);
+        this.put("node_9", 1001);
+    }};
+    private Map<String, String> differentComputedLeaderNodes = new HashMap<String, String>(){{
+        this.put("node_8", "node_8");
+        this.put("node_9", "node_9");
+    }};
+    private Map<String, String> differentCurrentLeaderNodes = new HashMap<String, String>(){{
+        this.put("node_8", "node_8");
+        this.put("node_9", "node_9");
+    }};
+    private Map<String, Float> differentDataMeasurementNodes = new HashMap<String, Float>(){{
+        this.put("node_8", 5000.0f);
+        this.put("node_9", 4000.0f);
+    }};
+    private Map<String, Float> differentDataResultNodes = new HashMap<String, Float>(){{
+        this.put("node_8", 5000.0f);
+        this.put("node_9", 4000.0f);
+    }};
+    private Map<String, Float> differentCurrentMeasurementNodes = new HashMap<String, Float>(){{
+        this.put("node_8", 5000.0f);
+        this.put("node_9", 4000.0f);
+    }};
+    private Map<String, Float> trySendingToBaseStationNodes = new HashMap<String, Float>(){{
+        this.put("node_8", 5000.0f);
+        this.put("node_9", 4000.0f);
+    }};
+    private Map<String, Class> differentMessagesAtLeaderApplicationNodes = new HashMap<String, Class>(){{
+        this.put("node_8", DataMeasurementTask.class);
+        this.put("node_9", DataResultTask.class);
+    }};
+    private Map<String, Class> differentMessagesAtLeaderResultNodes = new HashMap<String, Class>(){{
+        this.put("node_8", DataMeasurementTask.class);
+        this.put("node_9", DataResultTask.class);
+    }};
+    private Map<String, Class> differentMessagesAtDataMeasurementNodes = new HashMap<String, Class>(){{
+        this.put("node_8", LeaderResultTask.class);
+        this.put("node_9", LeadershipApplicationTask.class);
+    }};
+    private Map<String, Class> differentMessagesAtDataResultNodes = new HashMap<String, Class>(){{
+        this.put("node_8", LeaderResultTask.class);
+        this.put("node_9", LeadershipApplicationTask.class);
+    }};
 
 
     public Byzantine(Host host, String name, String[] args) {
