@@ -31,7 +31,7 @@ public class Legit extends Process {
     private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.2;
+    private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
@@ -129,11 +129,19 @@ public class Legit extends Process {
                         leaderSelectionTask.setOriginHost(Host.currentHost().getName());
                         leaderSelectionTask.setDestinationHost(destination);
 
-                        try {
-                            leaderSelectionTask.send(destination);
-                        } catch (TransferFailureException | HostFailureException e) {
-                            e.printStackTrace();
-                        } catch (TimeoutException ignored) { }
+                        boolean sent = false;
+                        int retries = 3;
+                        while (!sent && retries > 0) {
+                            try {
+                                retries--;
+                                leaderSelectionTask.send(destination);
+                                sent = true;
+                            } catch (Exception e) {
+                                try {
+                                    sleep(100);
+                                } catch (HostFailureException ignored) { }
+                            }
+                        }
                     }
                 }
 
@@ -277,11 +285,20 @@ public class Legit extends Process {
                         triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
                         triggerDataCollectionTask.setDestinationHost(destination);
 
-                        try {
-                            triggerDataCollectionTask.send(destination);
-                        } catch (TransferFailureException | HostFailureException e) {
-                            e.printStackTrace();
-                        } catch (TimeoutException ignored) { }
+                        boolean sent = false;
+                        int retries = 3;
+
+                        while (!sent && retries > 0) {
+                            try {
+                                retries--;
+                                triggerDataCollectionTask.send(destination);
+                                sent = true;
+                            } catch (Exception e) {
+                                try {
+                                    sleep(100);
+                                } catch (HostFailureException ignored) { }
+                            }
+                        }
                     }
                 }
 
