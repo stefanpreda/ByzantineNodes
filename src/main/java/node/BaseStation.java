@@ -134,16 +134,11 @@ public class BaseStation extends Process {
                 //Flood with LeaderSelectionTask
                 for (int i = 0; i < nodeCount; i++) {
                     LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-                    boolean sent = false;
-                    while (!sent) {
-                        try {
-                            leaderSelectionTask.send("node_" + i);
-                            sent = true;
-                        } catch (TransferFailureException | HostFailureException e) {
-                            e.printStackTrace();
-                        } catch (TimeoutException ignored) {
-                        }
-                    }
+                    try {
+                        leaderSelectionTask.send("node_" + i);
+                    } catch (TransferFailureException | HostFailureException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException ignored) { }
                 }
             }
 
@@ -161,16 +156,11 @@ public class BaseStation extends Process {
                     //Flood with LeaderSelectionTask
                     for (int i = 0; i < nodeCount; i++) {
                         LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-                        boolean sent = false;
-                        while (!sent) {
-                            try {
-                                leaderSelectionTask.send("node_" + i);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+                        try {
+                            leaderSelectionTask.send("node_" + i);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
                 else {
@@ -184,16 +174,11 @@ public class BaseStation extends Process {
                         readjustmentTask.setOriginHost("node_" + id);
                         readjustmentTask.setDestinationHost(disputingNode);
 
-                        boolean sent = false;
-                        while (!sent) {
-                            try {
-                                readjustmentTask.send(disputingNode);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+                        try {
+                            readjustmentTask.send(disputingNode);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
 
                     for (String disputingNode : disputingMeasurementNodes) {
@@ -203,16 +188,11 @@ public class BaseStation extends Process {
                         readjustmentTask.setOriginHost("node_" + id);
                         readjustmentTask.setDestinationHost(disputingNode);
 
-                        boolean sent = false;
-                        while (!sent) {
-                            try {
-                                readjustmentTask.send(disputingNode);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+                        try {
+                            readjustmentTask.send(disputingNode);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
 
@@ -228,6 +208,7 @@ public class BaseStation extends Process {
 
                 try {
                     Host.getByName(turnOffRequest.getName()).off();
+                    System.out.println(turnOffRequest.getName() + " DIED");
                 } catch (HostNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -260,16 +241,11 @@ public class BaseStation extends Process {
                     dataAckTask.setResult(finalDataResultTask.getResult());
                     dataAckTask.setLeader(finalDataResultTask.getOriginHost());
 
-                    boolean sent = false;
-                    while (!sent) {
-                        try {
-                            dataAckTask.send("node_" + i);
-                            sent = true;
-                        } catch (TransferFailureException | HostFailureException e) {
-                            e.printStackTrace();
-                        } catch (TimeoutException ignored) {
-                        }
-                    }
+                    try {
+                        dataAckTask.send("node_" + i);
+                    } catch (TransferFailureException | HostFailureException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException ignored) { }
                 }
 
                 disputeWaitStartTime = System.currentTimeMillis();

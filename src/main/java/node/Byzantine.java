@@ -35,7 +35,7 @@ public class Byzantine extends Process {
     private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.0;
+    private static final double RECEIVE_TIMEOUT = 1.2;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
@@ -98,7 +98,7 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
-    private boolean currentLeaderDiesOnNewLeaderSelection = false;
+    private boolean currentLeaderDiesAfterElection = false;
     private Float differentValueSentToBaseStation = 0.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
         this.put("node_8", 10);
@@ -184,16 +184,12 @@ public class Byzantine extends Process {
                         LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask();
                         leaderSelectionTask.setOriginHost(Host.currentHost().getName());
                         leaderSelectionTask.setDestinationHost(destination);
-                        boolean sent = false;
-                        while (!sent) {
-                            try {
-                                leaderSelectionTask.send(destination);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+
+                        try {
+                            leaderSelectionTask.send(destination);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
 
@@ -320,6 +316,14 @@ public class Byzantine extends Process {
                 //Reset counter for starting a new leader selection
                 lastLeaderSelectionTriggerTime = System.currentTimeMillis();
 
+                if (currentLeaderDiesAfterElection && currentLeader.equals(Host.currentHost().getName())) {
+                    currentLeaderDiesAfterElection = false;
+                    TurnOffRequest turnOffRequest = new TurnOffRequest(Host.currentHost().getName());
+                    try {
+                        turnOffRequest.send(baseStationHostName);
+                    } catch (Exception ignored) { }
+                }
+
                 if (task == null || task instanceof LeaderResultTask)
                     continue;
             }
@@ -335,17 +339,12 @@ public class Byzantine extends Process {
                         TriggerDataCollectionTask triggerDataCollectionTask = new TriggerDataCollectionTask();
                         triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
                         triggerDataCollectionTask.setDestinationHost(destination);
-                        boolean sent = false;
 
-                        while (!sent) {
-                            try {
-                                triggerDataCollectionTask.send(destination);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+                        try {
+                            triggerDataCollectionTask.send(destination);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
 

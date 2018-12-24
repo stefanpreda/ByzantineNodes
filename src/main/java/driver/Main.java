@@ -9,7 +9,7 @@ public class Main {
         ConfigurationGenerator generator = new ConfigurationGenerator();
 
         generator.generateTopology(10, 3, false);
-        generator.generateNodeRoles(7, 3);
+        generator.generateNodeRoles(0, 10);
 
         Msg.init(args);
 

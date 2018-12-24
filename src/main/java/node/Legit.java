@@ -31,7 +31,7 @@ public class Legit extends Process {
     private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.0;
+    private static final double RECEIVE_TIMEOUT = 1.2;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
@@ -128,16 +128,12 @@ public class Legit extends Process {
                         LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask();
                         leaderSelectionTask.setOriginHost(Host.currentHost().getName());
                         leaderSelectionTask.setDestinationHost(destination);
-                        boolean sent = false;
-                        while (!sent) {
-                            try {
-                                leaderSelectionTask.send(destination);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+
+                        try {
+                            leaderSelectionTask.send(destination);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
 
@@ -280,17 +276,12 @@ public class Legit extends Process {
                         TriggerDataCollectionTask triggerDataCollectionTask = new TriggerDataCollectionTask();
                         triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
                         triggerDataCollectionTask.setDestinationHost(destination);
-                        boolean sent = false;
 
-                        while (!sent) {
-                            try {
-                                triggerDataCollectionTask.send(destination);
-                                sent = true;
-                            } catch (TransferFailureException | HostFailureException e) {
-                                e.printStackTrace();
-                            } catch (TimeoutException ignored) {
-                            }
-                        }
+                        try {
+                            triggerDataCollectionTask.send(destination);
+                        } catch (TransferFailureException | HostFailureException e) {
+                            e.printStackTrace();
+                        } catch (TimeoutException ignored) { }
                     }
                 }
 
