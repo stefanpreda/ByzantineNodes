@@ -32,10 +32,10 @@ public class Byzantine extends Process {
     private static final long LEADER_SELECTION_INTERVAL = 14000 * NODE_COUNT;
 
     //In millis
-    private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
+    private static final long MEASUREMENT_TIMEOUT = 1100 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.2;
+    private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
@@ -330,11 +330,15 @@ public class Byzantine extends Process {
                 if (task == null || task instanceof LeaderResultTask)
                     continue;
             }
+//            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress())
+//                System.out.println("ELIGIBLE FOR MEASUREMENT");
 
             //Leader triggers measurement periodically only if a leader selection/measurement is not in progress
             if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
                     (System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
                 lastMeasurementTriggerTime = System.currentTimeMillis();
+
+//                System.out.println("TRYING TO TRIGGER MEASUREMENT");
 
                 //Flood with measurement trigger messages
                 for (String destination : ranks.keySet()) {

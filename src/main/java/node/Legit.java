@@ -28,10 +28,10 @@ public class Legit extends Process {
     //Leader selection interval in millis (5m)
     private static final long LEADER_SELECTION_INTERVAL = 14000 * NODE_COUNT;
 
-    private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
+    private static final long MEASUREMENT_TIMEOUT = 1100 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.2;
+    private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
