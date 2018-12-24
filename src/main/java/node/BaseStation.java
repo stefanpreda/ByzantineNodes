@@ -101,17 +101,12 @@ public class BaseStation extends Process {
             }
 
             boolean sent = false;
-            int retries = 3;
-            while (!sent && retries > 0) {
+            long start = System.currentTimeMillis();
+            while (!sent && System.currentTimeMillis() - start < 2000) {
                 try {
-                    retries--;
                     leaderSelectionTask.send("node_" + i);
                     sent = true;
-                } catch (Exception e) {
-                    try {
-                        sleep(100);
-                    } catch (HostFailureException ignored) { }
-                }
+                } catch (Exception ignored) { }
             }
         }
 
@@ -166,17 +161,12 @@ public class BaseStation extends Process {
                         LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
 
                         boolean sent = false;
-                        int retries = 3;
-                        while (!sent && retries > 0) {
+                        long start = System.currentTimeMillis();
+                        while (!sent && System.currentTimeMillis() - start < 2000) {
                             try {
-                                retries--;
                                 leaderSelectionTask.send("node_" + i);
                                 sent = true;
-                            } catch (Exception e) {
-                                try {
-                                    sleep(100);
-                                } catch (HostFailureException ignored) { }
-                            }
+                            } catch (Exception ignored) { }
                         }
                     }
                 }
@@ -192,17 +182,12 @@ public class BaseStation extends Process {
                         readjustmentTask.setDestinationHost(disputingNode);
 
                         boolean sent = false;
-                        int retries = 3;
-                        while (!sent && retries > 0) {
+                        long start = System.currentTimeMillis();
+                        while (!sent && System.currentTimeMillis() - start < 2000) {
                             try {
-                                retries--;
                                 readjustmentTask.send(disputingNode);
                                 sent = true;
-                            } catch (Exception e) {
-                                try {
-                                    sleep(100);
-                                } catch (HostFailureException ignored) { }
-                            }
+                            } catch (Exception ignored) { }
                         }
                     }
 
@@ -214,17 +199,12 @@ public class BaseStation extends Process {
                         readjustmentTask.setDestinationHost(disputingNode);
 
                         boolean sent = false;
-                        int retries = 3;
-                        while (!sent && retries > 0) {
+                        long start = System.currentTimeMillis();
+                        while (!sent && System.currentTimeMillis() - start < 2000) {
                             try {
-                                retries--;
                                 readjustmentTask.send(disputingNode);
                                 sent = true;
-                            } catch (Exception e) {
-                                try {
-                                    sleep(100);
-                                } catch (HostFailureException ignored) { }
-                            }
+                            } catch (Exception ignored) { }
                         }
                     }
                 }
@@ -275,17 +255,12 @@ public class BaseStation extends Process {
                     dataAckTask.setLeader(finalDataResultTask.getOriginHost());
 
                     boolean sent = false;
-                    int retries = 3;
-                    while (!sent && retries > 0) {
+                    long start = System.currentTimeMillis();
+                    while (!sent && System.currentTimeMillis() - start < 2000) {
                         try {
-                            retries--;
                             dataAckTask.send("node_" + i);
                             sent = true;
-                        } catch (Exception e) {
-                            try {
-                                sleep(100);
-                            } catch (HostFailureException ignored) { }
-                        }
+                        } catch (Exception ignored) { }
                     }
                 }
 

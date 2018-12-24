@@ -31,7 +31,7 @@ public class Legit extends Process {
     private static final long MEASUREMENT_TIMEOUT = 1000 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.0;
+    private static final double RECEIVE_TIMEOUT = 1.2;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
@@ -130,17 +130,12 @@ public class Legit extends Process {
                         leaderSelectionTask.setDestinationHost(destination);
 
                         boolean sent = false;
-                        int retries = 3;
-                        while (!sent && retries > 0) {
+                        long start = System.currentTimeMillis();
+                        while (!sent && System.currentTimeMillis() - start < 2000) {
                             try {
-                                retries--;
                                 leaderSelectionTask.send(destination);
                                 sent = true;
-                            } catch (Exception e) {
-                                try {
-                                    sleep(100);
-                                } catch (HostFailureException ignored) { }
-                            }
+                            } catch (Exception ignored) { }
                         }
                     }
                 }
@@ -286,18 +281,12 @@ public class Legit extends Process {
                         triggerDataCollectionTask.setDestinationHost(destination);
 
                         boolean sent = false;
-                        int retries = 3;
-
-                        while (!sent && retries > 0) {
+                        long start = System.currentTimeMillis();
+                        while (!sent && System.currentTimeMillis() - start < 2000) {
                             try {
-                                retries--;
                                 triggerDataCollectionTask.send(destination);
                                 sent = true;
-                            } catch (Exception e) {
-                                try {
-                                    sleep(100);
-                                } catch (HostFailureException ignored) { }
-                            }
+                            } catch (Exception ignored) { }
                         }
                     }
                 }
