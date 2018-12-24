@@ -137,11 +137,14 @@ public class BaseStation extends Process {
                 //Flood with LeaderSelectionTask
                 for (int i = 0; i < nodeCount; i++) {
                     LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-                    try {
-                        leaderSelectionTask.send("node_" + i);
-                    } catch (TransferFailureException | HostFailureException e) {
-                        e.printStackTrace();
-                    } catch (TimeoutException ignored) { }
+                    boolean sent = false;
+                    long start = System.currentTimeMillis();
+                    while (!sent && System.currentTimeMillis() - start < 2000) {
+                        try {
+                            leaderSelectionTask.send("node_" + i);
+                            sent = true;
+                        } catch (Exception ignored) { }
+                    }
                 }
             }
 
