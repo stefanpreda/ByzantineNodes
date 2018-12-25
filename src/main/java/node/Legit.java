@@ -657,7 +657,7 @@ public class Legit extends Process {
                         continue;
                     }
 
-                    if (!dataAckTask.getLeader().equals(currentLeader) || Math.abs(dataAckTask.getResult() - currentMeasurement) > 0.01) {
+                    if (!dataAckTask.getLeader().equals(currentLeader) || Math.abs(dataAckTask.getResult() - currentMeasurement) > 0.1) {
                         DataDisputeTask dataDisputeTask = new DataDisputeTask();
                         dataDisputeTask.setResult(currentMeasurement);
                         dataDisputeTask.setLeader(currentLeader);

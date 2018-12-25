@@ -89,8 +89,8 @@ public class Byzantine extends Process {
 
     //Byzantine Behaviour flags
     private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
-    private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
-    private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
+    private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
+    private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private boolean currentLeaderDiesAfterElection = false;
     private Float differentValueSentToBaseStation = 0.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
@@ -383,6 +383,12 @@ public class Byzantine extends Process {
                     return;
                 }
 
+                if (ignoreDataResultNodes.contains(Host.currentHost().getName())) {
+                    System.out.println("BYZANTINE NODE " + id + " DOES NOT SEND RESULT DATA");
+                    ignoreDataResultNodes.remove(Host.currentHost().getName());
+                    continue;
+                }
+
                 //Flood with common measurement
                 for (String destination : ranks.keySet()) {
                     if (!destination.equals(Host.currentHost().getName())) {
@@ -629,6 +635,12 @@ public class Byzantine extends Process {
                         valid = false;
                     }
 
+                    if (ignoreDataMeasurementNodes.contains(Host.currentHost().getName())) {
+                        System.out.println("BYZANTINE NODE " + id + " IGNORED MEASUREMENT TRIGGER ");
+                        ignoreDataMeasurementNodes.remove(Host.currentHost().getName());
+                        valid = false;
+                    }
+
                     if (!valid)
                         continue;
 
@@ -724,7 +736,7 @@ public class Byzantine extends Process {
                         continue;
                     }
 
-                    if (!dataAckTask.getLeader().equals(currentLeader) || Math.abs(dataAckTask.getResult() - currentMeasurement) > 0.01) {
+                    if (!dataAckTask.getLeader().equals(currentLeader) || Math.abs(dataAckTask.getResult() - currentMeasurement) > 0.1) {
                         DataDisputeTask dataDisputeTask = new DataDisputeTask();
                         dataDisputeTask.setResult(currentMeasurement);
                         dataDisputeTask.setLeader(currentLeader);
