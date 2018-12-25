@@ -13,32 +13,25 @@ import java.util.Random;
 
 public class Byzantine extends Process {
 
-    // one leader election = 20s
-    // one measurement = 20s
-    // first leader election triggered at start
-    // first measurement = 20s (first election) + 50s + 30s(duration)
-    // successive leader elections = 20s(first) + 140s + 140s + etc
-    // successive measurements = 20s + 50s + 50s + 50s (resets on leader election )
-
     private static final int NODE_COUNT = 10;
 
     //Higher than the highest possible rank
     private static final int ROLLING_RANK_VALUE = 1000;
 
     //In millis
-    private static final long LEADER_ELECTION_TIMEOUT = 1000 * NODE_COUNT;
+    private static final long LEADER_ELECTION_TIMEOUT = 1600 * NODE_COUNT;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 14000 * NODE_COUNT;
+    private static final long LEADER_SELECTION_INTERVAL = 17000 * NODE_COUNT;
 
     //In millis
-    private static final long MEASUREMENT_TIMEOUT = 1100 * NODE_COUNT;
+    private static final long MEASUREMENT_TIMEOUT = 1600 * NODE_COUNT;
 
     //In seconds
     private static final double RECEIVE_TIMEOUT = 1.0;
 
     //Measurement interval in millis (2m)
-    private static final long MEASUREMENT_INTERVAL = 5000 * NODE_COUNT;
+    private static final long MEASUREMENT_INTERVAL = 6000 * NODE_COUNT;
 
     //The minimum value for random generator
     private static final int MEASUREMENT_MIN = 10;
@@ -159,6 +152,8 @@ public class Byzantine extends Process {
         //The hostname of the base station
         String baseStationHostName = args[1];
 
+        Host.setAsyncMailbox(Host.currentHost().getName());
+
         System.out.println("BYZANTINE NODE " + id + " STARTED");
 
         while (true) {
@@ -178,6 +173,8 @@ public class Byzantine extends Process {
             if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
                 (System.currentTimeMillis() - lastLeaderSelectionTriggerTime > LEADER_SELECTION_INTERVAL)) {
 
+                System.out.println("LEADER TRYING TO TRIGGER LEADER SELECTION");
+
                 //Flood with LeaderSelectionTask
                 for (String destination : ranks.keySet()) {
                     if (!destination.equals(Host.currentHost().getName())) {
@@ -185,14 +182,7 @@ public class Byzantine extends Process {
                         leaderSelectionTask.setOriginHost(Host.currentHost().getName());
                         leaderSelectionTask.setDestinationHost(destination);
 
-                        boolean sent = false;
-                        long start = System.currentTimeMillis();
-                        while (!sent && System.currentTimeMillis() - start < 2000) {
-                            try {
-                                leaderSelectionTask.send(destination);
-                                sent = true;
-                            } catch (Exception ignored) { }
-                        }
+                        timeoutSendWithRetries(leaderSelectionTask, destination);
                     }
                 }
 
@@ -228,17 +218,17 @@ public class Byzantine extends Process {
                 leadershipApplications.clear();
                 leaderApplicationSent = false;
 
-                //Wait a bit for all nodes to receive the trigger message
-                try {
-                    sleep(400 * NODE_COUNT);
-                } catch (HostFailureException e) {
-                    System.err.println("BaseStation host failed!!");
-                    return;
-                }
-
                 //Trigger the flood with results
                 if (computedLeader != null) {
                     leadershipSelectionResultStartTimestamp = System.currentTimeMillis();
+
+                    //wait a bit before sending
+                    try {
+                        sleep(600);
+                    } catch (HostFailureException e) {
+                        System.err.println("BYZANTINE " + id + " host failed!!");
+                        return;
+                    }
 
                     //Flood with leader result
                     for (String destination : ranks.keySet()) {
@@ -247,15 +237,8 @@ public class Byzantine extends Process {
                             leaderResultTask.setHost(computedLeader);
                             leaderResultTask.setOriginHost(Host.currentHost().getName());
                             leaderResultTask.setDestinationHost(destination);
-                            leaderResultTask.dsend(destination);
 
-                            //Don't send them too fast
-                            try {
-                                sleep(500);
-                            } catch (HostFailureException e) {
-                                System.err.println("BYZANTINE " + id + " host failed!!");
-                                return;
-                            }
+                            timeoutSendWithRetries(leaderResultTask, destination);
                         }
                     }
 
@@ -322,23 +305,21 @@ public class Byzantine extends Process {
                 if (currentLeaderDiesAfterElection && currentLeader.equals(Host.currentHost().getName())) {
                     currentLeaderDiesAfterElection = false;
                     TurnOffRequest turnOffRequest = new TurnOffRequest(Host.currentHost().getName());
-                    try {
-                        turnOffRequest.send(baseStationHostName);
-                    } catch (Exception ignored) { }
+                    timeoutSendWithRetries(turnOffRequest, baseStationHostName);
                 }
+                else
+                    currentLeaderDiesAfterElection = false;
 
                 if (task == null || task instanceof LeaderResultTask)
                     continue;
             }
-//            if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress())
-//                System.out.println("ELIGIBLE FOR MEASUREMENT");
 
             //Leader triggers measurement periodically only if a leader selection/measurement is not in progress
             if (currentLeader != null && currentLeader.equals(Host.currentHost().getName()) && !measurementOrElectionInProgress() &&
                     (System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)) {
                 lastMeasurementTriggerTime = System.currentTimeMillis();
 
-//                System.out.println("TRYING TO TRIGGER MEASUREMENT");
+                System.out.println("LEADER TRYING TO TRIGGER MEASUREMENT");
 
                 //Flood with measurement trigger messages
                 for (String destination : ranks.keySet()) {
@@ -347,29 +328,22 @@ public class Byzantine extends Process {
                         triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
                         triggerDataCollectionTask.setDestinationHost(destination);
 
-                        boolean sent = false;
-                        long start = System.currentTimeMillis();
-                        while (!sent && System.currentTimeMillis() - start < 2000) {
-                            try {
-                                triggerDataCollectionTask.send(destination);
-                                sent = true;
-                            } catch (Exception ignored) { }
-                        }
+                        timeoutSendWithRetries(triggerDataCollectionTask, destination);
                     }
-                }
-
-                //Wait for a while so all hosts receive the trigger message
-                try {
-                    sleep(400 * NODE_COUNT);
-                } catch (HostFailureException e) {
-                    System.err.println("BYZANTINE" + id + " host failed!!");
-                    return;
                 }
 
                 measurementFloodStartTime = System.currentTimeMillis();
                 measurementResults.clear();
                 measurementFinalResults.clear();
                 computedMeasurement = -1.0f;
+
+                //Wait a bit for all nodes to receive the message
+                try {
+                    sleep(600 * NODE_COUNT);
+                } catch (HostFailureException e) {
+                    System.err.println("Byzantine node " + id + "host failed!!");
+                    return;
+                }
 
                 int measurement = generateMeasurement();
 
@@ -380,15 +354,7 @@ public class Byzantine extends Process {
                         dataMeasurementTask.setResult(measurement);
                         dataMeasurementTask.setOriginHost(Host.currentHost().getName());
                         dataMeasurementTask.setDestinationHost(destination);
-                        dataMeasurementTask.dsend(destination);
-
-                        //Don't send them so fast
-                        try {
-                            sleep(500);
-                        } catch (HostFailureException e) {
-                            System.err.println("BYZANTINE " + id + " host failed!!");
-                            return;
-                        }
+                        timeoutSendWithRetries(dataMeasurementTask, destination);
                     }
                 }
 
@@ -404,19 +370,18 @@ public class Byzantine extends Process {
 
                 computedMeasurement = computeCommonValue();
 
-                //Wait for a while so all hosts finish computing
-                try {
-                    sleep(400 * NODE_COUNT);
-                } catch (HostFailureException e) {
-                    System.err.println("BYZANTINE" + id + " host failed!!");
-                    return;
-                }
-
                 measurementFloodResultStartTime = System.currentTimeMillis();
                 measurementFloodStartTime = -1;
                 measurementResults.clear();
                 measurementFinalResults.clear();
 
+                //Wait for a while so all hosts finish computing
+                try {
+                    sleep(600);
+                } catch (HostFailureException e) {
+                    System.err.println("BYZANTINE" + id + " host failed!!");
+                    return;
+                }
 
                 //Flood with common measurement
                 for (String destination : ranks.keySet()) {
@@ -425,15 +390,7 @@ public class Byzantine extends Process {
                         dataResultTask.setResult(computedMeasurement);
                         dataResultTask.setOriginHost(Host.currentHost().getName());
                         dataResultTask.setDestinationHost(destination);
-                        dataResultTask.dsend(destination);
-
-                        //Don't send them so fast
-                        try {
-                            sleep(500);
-                        } catch (HostFailureException e) {
-                            System.err.println("BYZANTINE " + id + " host failed!!");
-                            return;
-                        }
+                        timeoutSendWithRetries(dataResultTask, destination);
                     }
                 }
 
@@ -479,20 +436,20 @@ public class Byzantine extends Process {
                     currentMeasurement = newMeasurement;
                     System.out.println("BYZANTINE NODE " + id + " UPDATE MEASUREMENT: " + newMeasurement);
 
+                    //wait a bit before sending
+                    try {
+                        sleep(500);
+                    } catch (HostFailureException e) {
+                        System.err.println("BYZANTINE " + id + " host failed!!");
+                        return;
+                    }
+
                     if (currentLeader.equals(Host.currentHost().getName())) {
                         FinalDataResultTask finalDataResultTask = new FinalDataResultTask();
                         finalDataResultTask.setResult(currentMeasurement);
                         finalDataResultTask.setOriginHost(Host.currentHost().getName());
                         finalDataResultTask.setDestinationHost(baseStationHostName);
-                        finalDataResultTask.dsend(baseStationHostName);
-
-                        //wait a bit after sending
-                        try {
-                            sleep(500);
-                        } catch (HostFailureException e) {
-                            System.err.println("BYZANTINE " + id + " host failed!!");
-                            return;
-                        }
+                        timeoutSendWithRetries(finalDataResultTask, baseStationHostName);
                     }
                 }
                 else {
@@ -549,9 +506,9 @@ public class Byzantine extends Process {
 
                     //Wait a bit for all nodes to receive the leader selection message
                     try {
-                        sleep(400 * NODE_COUNT);
+                        sleep(600 * NODE_COUNT);
                     } catch (HostFailureException e) {
-                        System.err.println("BaseStation host failed!!");
+                        System.err.println("Byzantine node " + id + "host failed!!");
                         return;
                     }
 
@@ -589,15 +546,7 @@ public class Byzantine extends Process {
                                     leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
                                     leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
                                     leadershipApplicationTask.setDestinationHost(destination);
-                                    leadershipApplicationTask.dsend(destination);
-
-                                    //Don't send them so fast
-                                    try {
-                                        sleep(500);
-                                    } catch (HostFailureException e) {
-                                        System.err.println("BYZANTINE " + id + " host failed!!");
-                                        return;
-                                    }
+                                    timeoutSendWithRetries(leadershipApplicationTask, destination);
                                 }
                             }
                         }
@@ -680,13 +629,6 @@ public class Byzantine extends Process {
                     System.out.println("BYZANTINE NODE " + id + " RECEIVED MEASUREMENT TRIGGER TASK FROM " +
                             triggerDataCollectionTask.getOriginHost());
 
-                    //Wait a bit for all nodes to receive the trigger message
-                    try {
-                        sleep(400 * NODE_COUNT);
-                    } catch (HostFailureException e) {
-                        System.err.println("BYZANTINE" + id + " host failed!!");
-                        return;
-                    }
 
                     //Ignore this request if it is too frequent
                     if (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)
@@ -699,6 +641,14 @@ public class Byzantine extends Process {
                     measurementFinalResults.clear();
                     computedMeasurement = -1.0f;
 
+                    //Wait a bit for all nodes to receive the trigger message
+                    try {
+                        sleep(600 * NODE_COUNT);
+                    } catch (HostFailureException e) {
+                        System.err.println("BYZANTINE" + id + " host failed!!");
+                        return;
+                    }
+
                     //Generate a random value within bounds
                     int measurement = generateMeasurement();
 
@@ -709,15 +659,7 @@ public class Byzantine extends Process {
                             dataMeasurementTask.setResult(measurement);
                             dataMeasurementTask.setOriginHost(Host.currentHost().getName());
                             dataMeasurementTask.setDestinationHost(destination);
-                            dataMeasurementTask.dsend(destination);
-
-                            //Don't send them so fast
-                            try {
-                                sleep(500);
-                            } catch (HostFailureException e) {
-                                System.err.println("BYZANTINE " + id + " host failed!!");
-                                return;
-                            }
+                            timeoutSendWithRetries(dataMeasurementTask, destination);
                         }
                     }
 
@@ -782,7 +724,7 @@ public class Byzantine extends Process {
                         dataDisputeTask.setLeader(currentLeader);
                         dataDisputeTask.setOriginHost(Host.currentHost().getName());
                         dataDisputeTask.setDestinationHost(baseStationHostName);
-                        dataDisputeTask.dsend(baseStationHostName);
+                        timeoutSendWithRetries(dataDisputeTask, baseStationHostName);
                     }
                 }
 
@@ -852,5 +794,18 @@ public class Byzantine extends Process {
             return false;
 
         return true;
+    }
+
+    private void timeoutSendWithRetries(Task task, String destination) {
+        boolean sent = false;
+        int retries = 10;
+
+        while (!sent && retries > 0) {
+            try {
+                retries--;
+                task.send(destination, RECEIVE_TIMEOUT);
+                sent = true;
+            } catch (TransferFailureException | HostFailureException | TimeoutException ignored) { }
+        }
     }
 }

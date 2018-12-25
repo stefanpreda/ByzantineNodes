@@ -6,7 +6,7 @@ apply plugin: 'application'
 
 mainClassName = 'driver.Main'
 
-sourceCompatibility = 1.8
+System.setProperty("java.library.path", "./libs")
 
 repositories {
     mavenCentral()

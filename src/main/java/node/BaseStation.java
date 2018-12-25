@@ -27,10 +27,10 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis
-    private static final double SIMULATION_TIMEOUT = 30000 * NODE_COUNT;
+    private static final double SIMULATION_TIMEOUT = 40000 * NODE_COUNT;
 
     //In millis
-    private static final double LAST_RECEIVE_TIMEOUT = 12000 * NODE_COUNT;
+    private static final double LAST_RECEIVE_TIMEOUT = 16000 * NODE_COUNT;
 
     //The time when base station started listening for dispute messages
     private long disputeWaitStartTime = -1;
@@ -62,6 +62,8 @@ public class BaseStation extends Process {
 
         System.out.println(ranks);
 
+        Host.setAsyncMailbox(Host.currentHost().getName());
+
         //Wait for other nodes to start
         try {
             sleep(300 * NODE_COUNT);
@@ -75,11 +77,7 @@ public class BaseStation extends Process {
             ActivationTask activationTask = new ActivationTask("ACTIVATION_TASK_" + i, COMPUTE_SIZE, COMMUNICATION_SIZE, ranks,
                     "node_" + id, "node_" + i);
 
-            try {
-                activationTask.send("node_" + i);
-            } catch (TransferFailureException | HostFailureException | TimeoutException e) {
-                e.printStackTrace();
-            }
+            timeoutSendWithRetries(activationTask, "node_" + i);
         }
 
         //Wait for everyone to do the necessary configurations
@@ -100,14 +98,7 @@ public class BaseStation extends Process {
                 continue;
             }
 
-            boolean sent = false;
-            long start = System.currentTimeMillis();
-            while (!sent && System.currentTimeMillis() - start < 2000) {
-                try {
-                    leaderSelectionTask.send("node_" + i);
-                    sent = true;
-                } catch (Exception ignored) { }
-            }
+            timeoutSendWithRetries(leaderSelectionTask, "node_" + i);
         }
 
         long startTime = System.currentTimeMillis();
@@ -133,18 +124,13 @@ public class BaseStation extends Process {
 
             if (System.currentTimeMillis() - lastMeasurementReceivedTime > LAST_RECEIVE_TIMEOUT) {
                 lastMeasurementReceivedTime = System.currentTimeMillis();
+                System.out.println("BASE STATION TRIGGERS LEADER SELECTION DUE TO MEASUREMENT TIMEOUT");
 
                 //Flood with LeaderSelectionTask
                 for (int i = 0; i < nodeCount; i++) {
                     LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-                    boolean sent = false;
-                    long start = System.currentTimeMillis();
-                    while (!sent && System.currentTimeMillis() - start < 2000) {
-                        try {
-                            leaderSelectionTask.send("node_" + i);
-                            sent = true;
-                        } catch (Exception ignored) { }
-                    }
+
+                    timeoutSendWithRetries(leaderSelectionTask, "node_" + i);
                 }
             }
 
@@ -162,15 +148,7 @@ public class BaseStation extends Process {
                     //Flood with LeaderSelectionTask
                     for (int i = 0; i < nodeCount; i++) {
                         LeaderSelectionTask leaderSelectionTask = new LeaderSelectionTask("node_" + id, "node_" + i);
-
-                        boolean sent = false;
-                        long start = System.currentTimeMillis();
-                        while (!sent && System.currentTimeMillis() - start < 2000) {
-                            try {
-                                leaderSelectionTask.send("node_" + i);
-                                sent = true;
-                            } catch (Exception ignored) { }
-                        }
+                        timeoutSendWithRetries(leaderSelectionTask, "node_" + i);
                     }
                 }
                 else {
@@ -184,14 +162,7 @@ public class BaseStation extends Process {
                         readjustmentTask.setOriginHost("node_" + id);
                         readjustmentTask.setDestinationHost(disputingNode);
 
-                        boolean sent = false;
-                        long start = System.currentTimeMillis();
-                        while (!sent && System.currentTimeMillis() - start < 2000) {
-                            try {
-                                readjustmentTask.send(disputingNode);
-                                sent = true;
-                            } catch (Exception ignored) { }
-                        }
+                        timeoutSendWithRetries(readjustmentTask, disputingNode);
                     }
 
                     for (String disputingNode : disputingMeasurementNodes) {
@@ -201,14 +172,7 @@ public class BaseStation extends Process {
                         readjustmentTask.setOriginHost("node_" + id);
                         readjustmentTask.setDestinationHost(disputingNode);
 
-                        boolean sent = false;
-                        long start = System.currentTimeMillis();
-                        while (!sent && System.currentTimeMillis() - start < 2000) {
-                            try {
-                                readjustmentTask.send(disputingNode);
-                                sent = true;
-                            } catch (Exception ignored) { }
-                        }
+                        timeoutSendWithRetries(readjustmentTask, disputingNode);
                     }
                 }
 
@@ -257,14 +221,7 @@ public class BaseStation extends Process {
                     dataAckTask.setResult(finalDataResultTask.getResult());
                     dataAckTask.setLeader(finalDataResultTask.getOriginHost());
 
-                    boolean sent = false;
-                    long start = System.currentTimeMillis();
-                    while (!sent && System.currentTimeMillis() - start < 2000) {
-                        try {
-                            dataAckTask.send("node_" + i);
-                            sent = true;
-                        } catch (Exception ignored) { }
-                    }
+                    timeoutSendWithRetries(dataAckTask, "node_" + i);
                 }
 
                 disputeWaitStartTime = System.currentTimeMillis();
@@ -306,11 +263,7 @@ public class BaseStation extends Process {
         for (int i = 0; i < nodeCount; i++) {
             FinishSimulationTask finishTask = new FinishSimulationTask();
 
-            try {
-                finishTask.send("node_" + i);
-            } catch (TransferFailureException | HostFailureException | TimeoutException e) {
-                e.printStackTrace();
-            }
+            timeoutSendWithRetries(finishTask, "node_" + i);
         }
 
         System.out.println("BASE STATION FINISHED EXECUTION");
@@ -324,5 +277,18 @@ public class BaseStation extends Process {
             ranks.put("node_" + i, generator.nextInt(MAX_RANK));
 
         return ranks;
+    }
+
+    private void timeoutSendWithRetries(Task task, String destination) {
+        boolean sent = false;
+        int retries = 10;
+
+        while (!sent && retries > 0) {
+            try {
+                retries--;
+                task.send(destination, RECEIVE_TIMEOUT);
+                sent = true;
+            } catch (TransferFailureException | HostFailureException | TimeoutException ignored) { }
+        }
     }
 }
