@@ -27,7 +27,7 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis
-    private static final double SIMULATION_TIMEOUT = 44000 * NODE_COUNT;
+    private static final double SIMULATION_TIMEOUT = 47000 * NODE_COUNT;
 
     //In millis
     private static final double LAST_RECEIVE_TIMEOUT = 18000 * NODE_COUNT;

@@ -22,7 +22,7 @@ public class Byzantine extends Process {
     private static final long LEADER_ELECTION_TIMEOUT = 1600 * NODE_COUNT;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 22000 * NODE_COUNT;
+    private static final long LEADER_SELECTION_INTERVAL = 23000 * NODE_COUNT;
 
     //In millis
     private static final long MEASUREMENT_TIMEOUT = 1600 * NODE_COUNT;
