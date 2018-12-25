@@ -92,7 +92,7 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private boolean currentLeaderDiesAfterElection = false;
-    private Float differentValueSentToBaseStation = 0.0f;
+    private float differentValueSentToBaseStation = 1000.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
         this.put("node_8", 10);
         this.put("node_9", 1001);
@@ -455,7 +455,15 @@ public class Byzantine extends Process {
                         finalDataResultTask.setResult(currentMeasurement);
                         finalDataResultTask.setOriginHost(Host.currentHost().getName());
                         finalDataResultTask.setDestinationHost(baseStationHostName);
+
+                        if (differentValueSentToBaseStation > 0) {
+                            System.out.println("BYZANTINE NODE " + id + " SENDING " + differentValueSentToBaseStation + " TO BASE STATION");
+                            finalDataResultTask.setResult(differentValueSentToBaseStation);
+                            differentValueSentToBaseStation = 0.0f;
+                        }
                         timeoutSendWithRetries(finalDataResultTask, baseStationHostName);
+                    } else {
+                        differentValueSentToBaseStation = 0.0f;
                     }
                 }
                 else {
