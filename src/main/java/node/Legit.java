@@ -737,17 +737,16 @@ public class Legit extends Process {
 
     private void timeoutSendWithRetries(Task task, String destination) {
         boolean sent = false;
-        int retries = 5;
+        long start = System.currentTimeMillis();
 
         try {
             if (Host.getByName(destination) == null || !Host.getByName(destination).isOn())
                 return;
         } catch (HostNotFoundException ignored) { }
 
-        while (!sent && retries > 0) {
+        while (!sent && System.currentTimeMillis() - start < 5000) {
             try {
-                retries--;
-                task.send(destination, RECEIVE_TIMEOUT);
+                task.send(destination);
                 sent = true;
             } catch (TransferFailureException | HostFailureException | TimeoutException ignored) { }
         }

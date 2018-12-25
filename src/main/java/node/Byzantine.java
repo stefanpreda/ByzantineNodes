@@ -22,7 +22,7 @@ public class Byzantine extends Process {
     private static final long LEADER_ELECTION_TIMEOUT = 1600 * NODE_COUNT;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 17000 * NODE_COUNT;
+    private static final long LEADER_SELECTION_INTERVAL = 19000 * NODE_COUNT;
 
     //In millis
     private static final long MEASUREMENT_TIMEOUT = 1600 * NODE_COUNT;
@@ -91,7 +91,7 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
-    private boolean currentLeaderDiesAfterElection = true;
+    private boolean currentLeaderDiesAfterElection = false;
     private Float differentValueSentToBaseStation = 0.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
         this.put("node_8", 10);
@@ -798,17 +798,16 @@ public class Byzantine extends Process {
 
     private void timeoutSendWithRetries(Task task, String destination) {
         boolean sent = false;
-        int retries = 5;
+        long start = System.currentTimeMillis();
 
         try {
             if (Host.getByName(destination) == null || !Host.getByName(destination).isOn())
                 return;
         } catch (HostNotFoundException ignored) { }
 
-        while (!sent && retries > 0) {
+        while (!sent && System.currentTimeMillis() - start < 5000) {
             try {
-                retries--;
-                task.send(destination, RECEIVE_TIMEOUT);
+                task.send(destination);
                 sent = true;
             } catch (TransferFailureException | HostFailureException | TimeoutException ignored) { }
         }
