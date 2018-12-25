@@ -22,7 +22,7 @@ public class Byzantine extends Process {
     private static final long LEADER_ELECTION_TIMEOUT = 1600 * NODE_COUNT;
 
     //Leader selection interval in millis (5m)
-    private static final long LEADER_SELECTION_INTERVAL = 19000 * NODE_COUNT;
+    private static final long LEADER_SELECTION_INTERVAL = 22000 * NODE_COUNT;
 
     //In millis
     private static final long MEASUREMENT_TIMEOUT = 1600 * NODE_COUNT;
@@ -98,12 +98,12 @@ public class Byzantine extends Process {
         this.put("node_not_exists_again", 1001);
     }};
     private Map<String, String> differentComputedLeaderNodes = new HashMap<String, String>(){{
-        this.put("node_8", "node_8");
-        this.put("node_9", "node_9");
+        this.put("node_not_exists", "node_8");
+        this.put("node_not_exists_again", "node_9");
     }};
     private Map<String, String> differentCurrentLeaderNodes = new HashMap<String, String>(){{
-        this.put("node_8", "node_8");
-        this.put("node_9", "node_9");
+        this.put("node_0", "node_0");
+        this.put("node_1", "node_1");
     }};
     private Map<String, Float> differentDataMeasurementNodes = new HashMap<String, Float>(){{
         this.put("node_8", 5000.0f);
@@ -289,8 +289,15 @@ public class Byzantine extends Process {
                         int oldRank = ranks.get(currentLeader);
                         ranks.put(currentLeader, oldRank - ROLLING_RANK_VALUE);
                     }
-                    currentLeader = newLeader;
-                    System.out.println("BYZANTINE NODE " + id + " UPDATE LEADER: " + newLeader);
+                    if (differentCurrentLeaderNodes.containsKey(Host.currentHost().getName())) {
+                        currentLeader = differentCurrentLeaderNodes.get(Host.currentHost().getName());
+                        System.out.println("BYZANTINE NODE " + id + " UPDATE LEADER: " + differentCurrentLeaderNodes.get(Host.currentHost().getName()));
+                        differentCurrentLeaderNodes.remove(Host.currentHost().getName());
+                    }
+                    else {
+                        currentLeader = newLeader;
+                        System.out.println("BYZANTINE NODE " + id + " UPDATE LEADER: " + newLeader);
+                    }
                 }
                 else {
                     System.out.println("BYZANTINE NODE " + id + " DID NOT RECEIVE ANY LEADER RESULTS");

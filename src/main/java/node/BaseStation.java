@@ -27,7 +27,7 @@ public class BaseStation extends Process {
     private static final double RECEIVE_TIMEOUT = 0.8;
 
     //In millis
-    private static final double SIMULATION_TIMEOUT = 40000 * NODE_COUNT;
+    private static final double SIMULATION_TIMEOUT = 44000 * NODE_COUNT;
 
     //In millis
     private static final double LAST_RECEIVE_TIMEOUT = 18000 * NODE_COUNT;
@@ -44,7 +44,7 @@ public class BaseStation extends Process {
     //In millis
     private static final long DISPUTE_TIMEOUT = 1000 * NODE_COUNT;
 
-    private static final long BYZANTINE_TIMEOUT = 10000 * NODE_COUNT;
+    private static final long BYZANTINE_TIMEOUT = 20000 * NODE_COUNT;
 
     public BaseStation(Host host, String name, String[] args) {
         super(host, name, args);
@@ -198,9 +198,6 @@ public class BaseStation extends Process {
             if (task != null && task instanceof FinalDataResultTask) {
                 FinalDataResultTask finalDataResultTask = (FinalDataResultTask)task;
 
-                System.out.println("BaseStation NODE " + id + " RECEIVED FINAL MEASUREMENT RESULT: "
-                    + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
-
                 //Check if node is still in timeout
                 if (timeoutNodes.containsKey(finalDataResultTask.getOriginHost())) {
                     if (System.currentTimeMillis() - timeoutNodes.get(finalDataResultTask.getOriginHost()) > BYZANTINE_TIMEOUT)
@@ -210,6 +207,14 @@ public class BaseStation extends Process {
                         continue;
                     }
                 }
+
+                if (disputeWaitStartTime > 0) {
+                    System.out.println("BaseStation CURRENTLY IGNORES FINAL DATA RESULT FROM " + finalDataResultTask.getOriginHost());
+                    continue;
+                }
+
+                System.out.println("BaseStation NODE " + id + " RECEIVED FINAL MEASUREMENT RESULT: "
+                    + finalDataResultTask.getResult() + " FROM NODE " + finalDataResultTask.getOriginHost());
 
                 lastMeasurementReceivedTime = System.currentTimeMillis();
 
