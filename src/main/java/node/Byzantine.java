@@ -209,8 +209,16 @@ public class Byzantine extends Process {
                         computedLeader = application;
                     }
 
-                if (computedLeader != null)
-                    System.out.println("BYZANTINE NODE " + id + " COMPUTED " + computedLeader + " AS THE NEW LEADER");
+                if (computedLeader != null) {
+                    if (differentComputedLeaderNodes.containsKey(Host.currentHost().getName())) {
+                        System.out.println("BYZANTINE NODE " + id + " COMPUTED " + differentComputedLeaderNodes.get(Host.currentHost().getName()) +
+                            " AS THE NEW LEADER");
+                        computedLeader = differentComputedLeaderNodes.get(Host.currentHost().getName());
+                        differentComputedLeaderNodes.remove(Host.currentHost().getName());
+                    }
+                    else
+                        System.out.println("BYZANTINE NODE " + id + " COMPUTED " + computedLeader + " AS THE NEW LEADER");
+                }
                 else
                     System.out.println("BYZANTINE NODE " + id + " DID NOT HAVE ANY LEADERSHIP APPLICATIONS");
 
