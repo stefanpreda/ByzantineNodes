@@ -737,7 +737,12 @@ public class Legit extends Process {
 
     private void timeoutSendWithRetries(Task task, String destination) {
         boolean sent = false;
-        int retries = 10;
+        int retries = 5;
+
+        try {
+            if (Host.getByName(destination) == null || !Host.getByName(destination).isOn())
+                return;
+        } catch (HostNotFoundException ignored) { }
 
         while (!sent && retries > 0) {
             try {

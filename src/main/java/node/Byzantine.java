@@ -91,7 +91,7 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
-    private boolean currentLeaderDiesAfterElection = false;
+    private boolean currentLeaderDiesAfterElection = true;
     private Float differentValueSentToBaseStation = 0.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
         this.put("node_8", 10);
@@ -798,7 +798,12 @@ public class Byzantine extends Process {
 
     private void timeoutSendWithRetries(Task task, String destination) {
         boolean sent = false;
-        int retries = 10;
+        int retries = 5;
+
+        try {
+            if (Host.getByName(destination) == null || !Host.getByName(destination).isOn())
+                return;
+        } catch (HostNotFoundException ignored) { }
 
         while (!sent && retries > 0) {
             try {
