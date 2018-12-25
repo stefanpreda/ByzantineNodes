@@ -505,7 +505,7 @@ public class Legit extends Process {
 
                     //Check if the rank received in the application is bigger than the one in memory
                     //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
-                    if (ranks.get(leadershipApplicationTask.getOriginHost()) > leadershipApplicationTask.getRank()) {
+                    if (ranks.get(leadershipApplicationTask.getOriginHost()) < leadershipApplicationTask.getRank()) {
                         System.out.println("LEGIT NODE " + id + " RECEIVED LEADER APPLICATION TASK FROM " +
                             leadershipApplicationTask.getOriginHost() + " BUT RANK IS HIGHER THAN EXPECTED");
                         continue;

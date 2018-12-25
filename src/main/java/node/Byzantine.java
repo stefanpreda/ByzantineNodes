@@ -92,10 +92,10 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private boolean currentLeaderDiesAfterElection = false;
-    private float differentValueSentToBaseStation = 1000.0f;
+    private float differentValueSentToBaseStation = 0.0f;
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
-        this.put("node_8", 10);
-        this.put("node_9", 1001);
+        this.put("node_not_exists", 10);
+        this.put("node_not_exists_again", 1001);
     }};
     private Map<String, String> differentComputedLeaderNodes = new HashMap<String, String>(){{
         this.put("node_8", "node_8");
@@ -566,13 +566,24 @@ public class Byzantine extends Process {
                                     leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
                                     leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
                                     leadershipApplicationTask.setDestinationHost(destination);
+
+                                    if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
+                                        leadershipApplicationTask.setRank(differentRanksNodes.get(Host.currentHost().getName()));
+                                    }
+
                                     timeoutSendWithRetries(leadershipApplicationTask, destination);
                                 }
                             }
                         }
 
                         //Add myself in the list of applications
-                        leadershipApplications.put(Host.currentHost().getName(), ranks.get(Host.currentHost().getName()));
+                        if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
+                            leadershipApplications.put(Host.currentHost().getName(), differentRanksNodes.get(Host.currentHost().getName()));
+                            differentRanksNodes.remove(Host.currentHost().getName());
+                        }
+                        else {
+                            leadershipApplications.put(Host.currentHost().getName(), ranks.get(Host.currentHost().getName()));
+                        }
                     }
 
                 }
@@ -586,7 +597,7 @@ public class Byzantine extends Process {
 
                     //Check if the rank received in the application is bigger than the one in memory
                     //THE UNDERLYING ROUTING PROTOCOL CAN CONFIRM THE IDENTITY OF THE SOURCE
-                    if (ranks.get(leadershipApplicationTask.getOriginHost()) > leadershipApplicationTask.getRank()) {
+                    if (ranks.get(leadershipApplicationTask.getOriginHost()) < leadershipApplicationTask.getRank()) {
                         System.out.println("BYZANTINE NODE " + id + " RECEIVED LEADER APPLICATION TASK FROM " +
                                 leadershipApplicationTask.getOriginHost() + " BUT RANK IS HIGHER THAN EXPECTED");
                         continue;
