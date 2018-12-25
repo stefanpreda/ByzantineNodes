@@ -240,7 +240,7 @@ public class BaseStation extends Process {
 
                 //Accept only one result from each host
                 if (!disputingLeaderNodes.contains(dataDisputeTask.getOriginHost()) &&
-                        !dataDisputeTask.getLeader().equals(currentLeader)) {
+                    (dataDisputeTask.getLeader() == null || !dataDisputeTask.getLeader().equals(currentLeader))) {
 
                     disputingLeaderNodes.add(dataDisputeTask.getOriginHost());
                     System.out.println("BaseStation NODE " + id + " RECEIVED LEADER DISPUTE TASK FROM " +

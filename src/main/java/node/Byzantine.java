@@ -88,7 +88,7 @@ public class Byzantine extends Process {
     private float currentMeasurement = -1.0f;
 
     //Byzantine Behaviour flags
-    private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
+    private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_8", "node_9"));
     private boolean currentLeaderDiesAfterElection = false;
@@ -498,6 +498,12 @@ public class Byzantine extends Process {
                     if (currentLeader != null && leaderSelectionTask.getOriginHost().equals(currentLeader)) {
                         System.out.println("BYZANTINE NODE " + id + " RECEIVED LEADER SELECTION TASK FROM CURRENT LEADER: " + currentLeader);
                         valid = true;
+                    }
+
+                    if (ignoreLeaderSelectionNodes.contains(Host.currentHost().getName())) {
+                        System.out.println("BYZANTINE NODE " + id + " IGNORES LEADER SELECTION");
+                        ignoreLeaderSelectionNodes.remove(Host.currentHost().getName());
+                        valid = false;
                     }
 
                     //Most likely received from byzantine node
