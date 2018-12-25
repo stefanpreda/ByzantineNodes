@@ -28,7 +28,7 @@ public class Byzantine extends Process {
     private static final long MEASUREMENT_TIMEOUT = 1600 * NODE_COUNT;
 
     //In seconds
-    private static final double RECEIVE_TIMEOUT = 1.0;
+    private static final double RECEIVE_TIMEOUT = 3.0;
 
     //Measurement interval in millis (2m)
     private static final long MEASUREMENT_INTERVAL = 6000 * NODE_COUNT;
@@ -637,7 +637,7 @@ public class Byzantine extends Process {
 
 
                     //Ignore this request if it is too frequent
-                    if (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime > MEASUREMENT_INTERVAL)
+                    if (lastMeasurementTriggerTime == -1 || System.currentTimeMillis() - lastMeasurementTriggerTime >   - 1000)
                         lastMeasurementTriggerTime = System.currentTimeMillis();
                     else
                         continue;
@@ -811,7 +811,7 @@ public class Byzantine extends Process {
                 return;
         } catch (HostNotFoundException ignored) { }
 
-        while (!sent && System.currentTimeMillis() - start < 5000) {
+        while (!sent && System.currentTimeMillis() - start < 8000) {
             try {
                 task.send(destination);
                 sent = true;
