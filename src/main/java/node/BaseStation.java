@@ -203,7 +203,7 @@ public class BaseStation extends Process {
                     if (System.currentTimeMillis() - timeoutNodes.get(finalDataResultTask.getOriginHost()) > BYZANTINE_TIMEOUT)
                         timeoutNodes.remove(finalDataResultTask.getOriginHost());
                     else {
-                        System.out.println("BaseStation NODE " + id + " IGNORED MEASUREMENT DUE TO NODE TIMEOUT");
+                        System.out.println("BaseStation NODE " + id + " IGNORED MEASUREMENT DUE TO NODE " + finalDataResultTask.getOriginHost() +" TIMEOUT");
                         continue;
                     }
                 }
