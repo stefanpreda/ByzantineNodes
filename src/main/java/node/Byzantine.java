@@ -114,13 +114,17 @@ public class Byzantine extends Process {
         this.put("node_not_exists_again", 4000.0f);
     }};
     private Map<String, Float> differentCurrentMeasurementNodes = new HashMap<String, Float>(){{
-        this.put("node_8", 5000.0f);
-        this.put("node_9", 4000.0f);
+        this.put("node_not_exists", 5000.0f);
+        this.put("node_not_exists_again", 4000.0f);
     }};
     private Map<String, Float> trySendingToBaseStationNodes = new HashMap<String, Float>(){{
         this.put("node_8", 5000.0f);
         this.put("node_9", 4000.0f);
     }};
+    private static final int trySendingToBaseStationDelay = 15000;
+    private long trySendingToBaseStationLastAttemptTimestamp = -1;
+    private int trySendingToBaseStationCount = 2;
+
     private Map<String, Class> differentMessagesAtLeaderApplicationNodes = new HashMap<String, Class>(){{
         this.put("node_8", DataMeasurementTask.class);
         this.put("node_9", DataResultTask.class);
@@ -317,6 +321,9 @@ public class Byzantine extends Process {
                 //Reset counter for starting a new leader selection
                 lastLeaderSelectionTriggerTime = System.currentTimeMillis();
 
+                //Setup start time for byzantine node behavior of sending without decision to base station
+                trySendingToBaseStationLastAttemptTimestamp = System.currentTimeMillis();
+
                 if (currentLeaderDiesAfterElection && currentLeader.equals(Host.currentHost().getName())) {
                     currentLeaderDiesAfterElection = false;
                     TurnOffRequest turnOffRequest = new TurnOffRequest(Host.currentHost().getName());
@@ -504,6 +511,18 @@ public class Byzantine extends Process {
 
                 if (task == null || task instanceof DataResultTask)
                     continue;
+            }
+            if (trySendingToBaseStationNodes.containsKey(Host.currentHost().getName()) && trySendingToBaseStationCount > 0 &&
+                trySendingToBaseStationLastAttemptTimestamp > 0 && System.currentTimeMillis() - trySendingToBaseStationLastAttemptTimestamp > trySendingToBaseStationDelay) {
+                trySendingToBaseStationCount--;
+                trySendingToBaseStationLastAttemptTimestamp = System.currentTimeMillis();
+
+                FinalDataResultTask finalDataResultTask = new FinalDataResultTask();
+                finalDataResultTask.setResult(trySendingToBaseStationNodes.get(Host.currentHost().getName()));
+                finalDataResultTask.setOriginHost(Host.currentHost().getName());
+                finalDataResultTask.setDestinationHost(baseStationHostName);
+                timeoutSendWithRetries(finalDataResultTask, baseStationHostName);
+                System.out.println("BYZANTINE NODE " + id + " TRIES SENDING RESULT TO BASE STATION WITHOUT DECISION PROCESS");
             }
 
             if (task != null) {
