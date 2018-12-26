@@ -93,7 +93,13 @@ public class Byzantine extends Process {
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private boolean currentLeaderDiesAfterElection = false;
+    private boolean currentLeaderEnrollsAgain = false;
     private float differentValueSentToBaseStation = 0.0f;
+
+    private static boolean leaderSpamsMeasurementTriggers = false;
+    private static final int leaderSpamsMeasurementTriggersDelay = 5000;
+    private static int leaderSpamsMeasurementTriggersCount = 0;
+
     private Map<String, Integer> differentRanksNodes = new HashMap<String, Integer>(){{
         this.put("node_not_exists", 10);
         this.put("node_not_exists_again", 1001);
@@ -127,20 +133,20 @@ public class Byzantine extends Process {
     private int trySendingToBaseStationCount = 2;
 
     private Map<String, Class> differentMessagesAtLeaderApplicationNodes = new HashMap<String, Class>(){{
-        this.put("node_8", DataMeasurementTask.class);
-        this.put("node_9", DataResultTask.class);
+        this.put("node_not_exists", DataMeasurementTask.class);
+        this.put("node_not_exists_again", DataResultTask.class);
     }};
     private Map<String, Class> differentMessagesAtLeaderResultNodes = new HashMap<String, Class>(){{
-        this.put("node_8", DataMeasurementTask.class);
-        this.put("node_9", DataResultTask.class);
+        this.put("node_not_exists", DataMeasurementTask.class);
+        this.put("node_not_exists_again", DataResultTask.class);
     }};
     private Map<String, Class> differentMessagesAtDataMeasurementNodes = new HashMap<String, Class>(){{
-        this.put("node_8", LeaderResultTask.class);
-        this.put("node_9", LeadershipApplicationTask.class);
+        this.put("node_not_exists", LeaderResultTask.class);
+        this.put("node_not_exists_again", LeadershipApplicationTask.class);
     }};
     private Map<String, Class> differentMessagesAtDataResultNodes = new HashMap<String, Class>(){{
-        this.put("node_8", LeaderResultTask.class);
-        this.put("node_9", LeadershipApplicationTask.class);
+        this.put("node_not_exists", LeaderResultTask.class);
+        this.put("node_not_exists_again", LeadershipApplicationTask.class);
     }};
 
 
@@ -199,6 +205,39 @@ public class Byzantine extends Process {
                 computedLeader = null;
 
                 lastLeaderSelectionTriggerTime = System.currentTimeMillis();
+
+                if (currentLeaderEnrollsAgain) {
+                    currentLeaderEnrollsAgain = false;
+                    leaderApplicationSent = true;
+
+                    //Flood with leadership applications
+                    for (String destination : ranks.keySet()) {
+                        //Don't send to localhost
+                        if (!Host.currentHost().getName().equals(destination)) {
+                            if (!destination.equals(Host.currentHost().getName())) {
+                                LeadershipApplicationTask leadershipApplicationTask = new LeadershipApplicationTask();
+                                leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
+                                leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
+                                leadershipApplicationTask.setDestinationHost(destination);
+
+                                if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
+                                    leadershipApplicationTask.setRank(differentRanksNodes.get(Host.currentHost().getName()));
+                                }
+
+                                timeoutSendWithRetries(leadershipApplicationTask, destination);
+                            }
+                        }
+                    }
+
+                    //Add myself in the list of applications
+                    if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
+                        leadershipApplications.put(Host.currentHost().getName(), differentRanksNodes.get(Host.currentHost().getName()));
+                        differentRanksNodes.remove(Host.currentHost().getName());
+                    }
+                    else {
+                        leadershipApplications.put(Host.currentHost().getName(), ranks.get(Host.currentHost().getName()));
+                    }
+                }
             }
 
             //LEADER APPLICATIONS FLOOD ENDED
@@ -346,6 +385,11 @@ public class Byzantine extends Process {
                 //Setup start time for byzantine node behavior of sending without decision to base station
                 trySendingToBaseStationLastAttemptTimestamp = System.currentTimeMillis();
 
+                if (!currentLeader.equals(Host.currentHost().getName())) {
+                    leaderSpamsMeasurementTriggers = false;
+                    currentLeaderEnrollsAgain = false;
+                }
+
                 if (currentLeaderDiesAfterElection && currentLeader.equals(Host.currentHost().getName())) {
                     currentLeaderDiesAfterElection = false;
                     TurnOffRequest turnOffRequest = new TurnOffRequest(Host.currentHost().getName());
@@ -396,6 +440,11 @@ public class Byzantine extends Process {
                     differentDataMeasurementNodes.remove(Host.currentHost().getName());
                 }
 
+                if (leaderSpamsMeasurementTriggersCount > 0) {
+                    leaderSpamsMeasurementTriggers = true;
+                }
+
+
                 if (differentMessagesAtDataMeasurementNodes.containsKey(Host.currentHost().getName())) {
                     System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
                     Class differentMessageClass = differentMessagesAtDataMeasurementNodes.get(Host.currentHost().getName());
@@ -430,6 +479,27 @@ public class Byzantine extends Process {
 
                 //Also store own measurement
                 measurementResults.put(Host.currentHost().getName(), measurement);
+            }
+
+            //Spam with measurement triggers
+            if (leaderSpamsMeasurementTriggers && leaderSpamsMeasurementTriggersCount > 0 && currentLeader != null
+                && currentLeader.equals(Host.currentHost().getName()) &&
+                (System.currentTimeMillis() - lastMeasurementTriggerTime > leaderSpamsMeasurementTriggersDelay)) {
+
+                leaderSpamsMeasurementTriggersCount--;
+
+                System.out.println("BYZANTINE NODE " + id + " SPAMS MEASUREMENT TRIGGER MESSAGES");
+
+                //Flood with measurement trigger messages
+                for (String destination : ranks.keySet()) {
+                    if (!destination.equals(Host.currentHost().getName())) {
+                        TriggerDataCollectionTask triggerDataCollectionTask = new TriggerDataCollectionTask();
+                        triggerDataCollectionTask.setOriginHost(Host.currentHost().getName());
+                        triggerDataCollectionTask.setDestinationHost(destination);
+
+                        timeoutSendWithRetries(triggerDataCollectionTask, destination);
+                    }
+                }
             }
 
             //MEASUREMENTS FLOOD ENDED
@@ -746,6 +816,10 @@ public class Byzantine extends Process {
                         ranks.put(leadershipApplicationTask.getOriginHost(), leadershipApplicationTask.getRank());
                     }
 
+                    //Check if the application did not come from the current leader
+                    if (currentLeader != null && currentLeader.equals(leadershipApplicationTask.getOriginHost()))
+                        continue;
+
                     //Save the application
                     leadershipApplications.put(leadershipApplicationTask.getOriginHost(), leadershipApplicationTask.getRank());
 
@@ -784,8 +858,8 @@ public class Byzantine extends Process {
                         valid = false;
                     }
 
-                    //Received measurement task during leader selection process
-                    if (leadershipSelectionApplicationStartTimestamp > 0 || leadershipSelectionResultStartTimestamp > 0) {
+                    //Received measurement task during leader selection process or measurement process
+                    if (measurementOrElectionInProgress()) {
                         valid = false;
                     }
 

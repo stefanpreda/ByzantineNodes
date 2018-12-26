@@ -5,10 +5,8 @@ import org.simgrid.msg.Process;
 import task.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Random;
 
 public class Legit extends Process {
@@ -519,6 +517,10 @@ public class Legit extends Process {
                         ranks.put(leadershipApplicationTask.getOriginHost(), leadershipApplicationTask.getRank());
                     }
 
+                    //Check if the application did not come from the current leader
+                    if (currentLeader != null && currentLeader.equals(leadershipApplicationTask.getOriginHost()))
+                        continue;
+
                     //Save the application
                     leadershipApplications.put(leadershipApplicationTask.getOriginHost(), leadershipApplicationTask.getRank());
 
@@ -557,8 +559,8 @@ public class Legit extends Process {
                         valid = false;
                     }
 
-                    //Received measurement task during leader selection process
-                    if (leadershipSelectionApplicationStartTimestamp > 0 || leadershipSelectionResultStartTimestamp > 0) {
+                    //Received measurement task during leader selection process or measurement process
+                    if (measurementOrElectionInProgress()) {
                         valid = false;
                     }
 
