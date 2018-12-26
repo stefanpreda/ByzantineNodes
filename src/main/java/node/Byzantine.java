@@ -4,6 +4,7 @@ import org.simgrid.msg.*;
 import org.simgrid.msg.Process;
 import task.*;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -243,14 +244,35 @@ public class Byzantine extends Process {
                     }
 
                     //Flood with leader result
-                    for (String destination : ranks.keySet()) {
-                        if (!destination.equals(Host.currentHost().getName())) {
-                            LeaderResultTask leaderResultTask = new LeaderResultTask();
-                            leaderResultTask.setHost(computedLeader);
-                            leaderResultTask.setOriginHost(Host.currentHost().getName());
-                            leaderResultTask.setDestinationHost(destination);
+                    if (differentMessagesAtLeaderResultNodes.containsKey(Host.currentHost().getName())) {
+                        System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
+                        Class differentMessageClass = differentMessagesAtLeaderResultNodes.get(Host.currentHost().getName());
+                        try {
+                            for (String destination : ranks.keySet()) {
+                                if (!destination.equals(Host.currentHost().getName())) {
+                                    SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+                                    differentMessage.setOriginHost(Host.currentHost().getName());
+                                    differentMessage.setDestinationHost(destination);
+                                    timeoutSendWithRetries(differentMessage, destination);
+                                }
+                            }
 
-                            timeoutSendWithRetries(leaderResultTask, destination);
+                        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
+
+                        differentMessagesAtLeaderResultNodes.remove(Host.currentHost().getName());
+                    }
+                    else {
+                        for (String destination : ranks.keySet()) {
+                            if (!destination.equals(Host.currentHost().getName())) {
+                                LeaderResultTask leaderResultTask = new LeaderResultTask();
+                                leaderResultTask.setHost(computedLeader);
+                                leaderResultTask.setOriginHost(Host.currentHost().getName());
+                                leaderResultTask.setDestinationHost(destination);
+
+                                timeoutSendWithRetries(leaderResultTask, destination);
+                            }
                         }
                     }
 
@@ -369,14 +391,40 @@ public class Byzantine extends Process {
 
                 int measurement = generateMeasurement();
 
-                //Flood with measurements
-                for (String destination : ranks.keySet()) {
-                    if (!destination.equals(Host.currentHost().getName())) {
-                        DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
-                        dataMeasurementTask.setResult(measurement);
-                        dataMeasurementTask.setOriginHost(Host.currentHost().getName());
-                        dataMeasurementTask.setDestinationHost(destination);
-                        timeoutSendWithRetries(dataMeasurementTask, destination);
+                if (differentDataMeasurementNodes.containsKey(Host.currentHost().getName())) {
+                    measurement = differentDataMeasurementNodes.get(Host.currentHost().getName());
+                    differentDataMeasurementNodes.remove(Host.currentHost().getName());
+                }
+
+                if (differentMessagesAtDataMeasurementNodes.containsKey(Host.currentHost().getName())) {
+                    System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
+                    Class differentMessageClass = differentMessagesAtDataMeasurementNodes.get(Host.currentHost().getName());
+                    try {
+                        for (String destination : ranks.keySet()) {
+                            if (!destination.equals(Host.currentHost().getName())) {
+                                SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+                                differentMessage.setOriginHost(Host.currentHost().getName());
+                                differentMessage.setDestinationHost(destination);
+                                timeoutSendWithRetries(differentMessage, destination);
+                            }
+                        }
+
+                    } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+
+                    differentMessagesAtDataMeasurementNodes.remove(Host.currentHost().getName());
+                }
+                else {
+                    //Flood with measurements
+                    for (String destination : ranks.keySet()) {
+                        if (!destination.equals(Host.currentHost().getName())) {
+                            DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
+                            dataMeasurementTask.setResult(measurement);
+                            dataMeasurementTask.setOriginHost(Host.currentHost().getName());
+                            dataMeasurementTask.setDestinationHost(destination);
+                            timeoutSendWithRetries(dataMeasurementTask, destination);
+                        }
                     }
                 }
 
@@ -417,13 +465,34 @@ public class Byzantine extends Process {
                 }
 
                 //Flood with common measurement
-                for (String destination : ranks.keySet()) {
-                    if (!destination.equals(Host.currentHost().getName())) {
-                        DataResultTask dataResultTask = new DataResultTask();
-                        dataResultTask.setResult(computedMeasurement);
-                        dataResultTask.setOriginHost(Host.currentHost().getName());
-                        dataResultTask.setDestinationHost(destination);
-                        timeoutSendWithRetries(dataResultTask, destination);
+                if (differentMessagesAtDataResultNodes.containsKey(Host.currentHost().getName())) {
+                    System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
+                    Class differentMessageClass = differentMessagesAtDataResultNodes.get(Host.currentHost().getName());
+                    try {
+                        for (String destination : ranks.keySet()) {
+                            if (!destination.equals(Host.currentHost().getName())) {
+                                SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+                                differentMessage.setOriginHost(Host.currentHost().getName());
+                                differentMessage.setDestinationHost(destination);
+                                timeoutSendWithRetries(differentMessage, destination);
+                            }
+                        }
+
+                    } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+
+                    differentMessagesAtDataResultNodes.remove(Host.currentHost().getName());
+                }
+                else {
+                    for (String destination : ranks.keySet()) {
+                        if (!destination.equals(Host.currentHost().getName())) {
+                            DataResultTask dataResultTask = new DataResultTask();
+                            dataResultTask.setResult(computedMeasurement);
+                            dataResultTask.setOriginHost(Host.currentHost().getName());
+                            dataResultTask.setDestinationHost(destination);
+                            timeoutSendWithRetries(dataResultTask, destination);
+                        }
                     }
                 }
 
@@ -602,21 +671,42 @@ public class Byzantine extends Process {
                             (!currentLeader.equals(Host.currentHost().getName()) && !leaderApplicationSent)) {
                         leaderApplicationSent = true;
 
-                        //Flood with leadership applications
-                        for (String destination : ranks.keySet()) {
-                            //Don't send to localhost
-                            if (!Host.currentHost().getName().equals(destination)) {
-                                if (!destination.equals(Host.currentHost().getName())) {
-                                    LeadershipApplicationTask leadershipApplicationTask = new LeadershipApplicationTask();
-                                    leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
-                                    leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
-                                    leadershipApplicationTask.setDestinationHost(destination);
-
-                                    if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
-                                        leadershipApplicationTask.setRank(differentRanksNodes.get(Host.currentHost().getName()));
+                        if (differentMessagesAtLeaderApplicationNodes.containsKey(Host.currentHost().getName())) {
+                            System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
+                            Class differentMessageClass = differentMessagesAtLeaderApplicationNodes.get(Host.currentHost().getName());
+                            try {
+                                for (String destination : ranks.keySet()) {
+                                    if (!destination.equals(Host.currentHost().getName())) {
+                                        SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+                                        differentMessage.setOriginHost(Host.currentHost().getName());
+                                        differentMessage.setDestinationHost(destination);
+                                        timeoutSendWithRetries(differentMessage, destination);
                                     }
+                                }
 
-                                    timeoutSendWithRetries(leadershipApplicationTask, destination);
+                            } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                                e.printStackTrace();
+                            }
+
+                            differentMessagesAtLeaderApplicationNodes.remove(Host.currentHost().getName());
+                        }
+                        else {
+                            //Flood with leadership applications
+                            for (String destination : ranks.keySet()) {
+                                //Don't send to localhost
+                                if (!Host.currentHost().getName().equals(destination)) {
+                                    if (!destination.equals(Host.currentHost().getName())) {
+                                        LeadershipApplicationTask leadershipApplicationTask = new LeadershipApplicationTask();
+                                        leadershipApplicationTask.setRank(ranks.get(Host.currentHost().getName()));
+                                        leadershipApplicationTask.setOriginHost(Host.currentHost().getName());
+                                        leadershipApplicationTask.setDestinationHost(destination);
+
+                                        if (differentRanksNodes.containsKey(Host.currentHost().getName())) {
+                                            leadershipApplicationTask.setRank(differentRanksNodes.get(Host.currentHost().getName()));
+                                        }
+
+                                        timeoutSendWithRetries(leadershipApplicationTask, destination);
+                                    }
                                 }
                             }
                         }
@@ -739,25 +829,35 @@ public class Byzantine extends Process {
                         differentDataMeasurementNodes.remove(Host.currentHost().getName());
                     }
 
-//                    if (differentMessagesAtLeaderApplicationNodes.containsKey(Host.currentHost().getName())) {
-//                        Class differentMessageClass = differentMessagesAtLeaderApplicationNodes.get(Host.currentHost().getName());
-//                        try {
-//                            SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
-//                        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-//                            e.printStackTrace();
-//                        }
-//
-//                        differentMessagesAtLeaderApplicationNodes.remove(Host.currentHost().getName());
-//                    }
+                    if (differentMessagesAtDataMeasurementNodes.containsKey(Host.currentHost().getName())) {
+                        System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
+                        Class differentMessageClass = differentMessagesAtDataMeasurementNodes.get(Host.currentHost().getName());
+                        try {
+                            for (String destination : ranks.keySet()) {
+                                if (!destination.equals(Host.currentHost().getName())) {
+                                    SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+                                    differentMessage.setOriginHost(Host.currentHost().getName());
+                                    differentMessage.setDestinationHost(destination);
+                                    timeoutSendWithRetries(differentMessage, destination);
+                                }
+                            }
 
-                    //Flood with measurements
-                    for (String destination : ranks.keySet()) {
-                        if (!destination.equals(Host.currentHost().getName())) {
-                            DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
-                            dataMeasurementTask.setResult(measurement);
-                            dataMeasurementTask.setOriginHost(Host.currentHost().getName());
-                            dataMeasurementTask.setDestinationHost(destination);
-                            timeoutSendWithRetries(dataMeasurementTask, destination);
+                        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
+
+                        differentMessagesAtDataMeasurementNodes.remove(Host.currentHost().getName());
+                    }
+                    else {
+                        //Flood with measurements
+                        for (String destination : ranks.keySet()) {
+                            if (!destination.equals(Host.currentHost().getName())) {
+                                DataMeasurementTask dataMeasurementTask = new DataMeasurementTask();
+                                dataMeasurementTask.setResult(measurement);
+                                dataMeasurementTask.setOriginHost(Host.currentHost().getName());
+                                dataMeasurementTask.setDestinationHost(destination);
+                                timeoutSendWithRetries(dataMeasurementTask, destination);
+                            }
                         }
                     }
 
