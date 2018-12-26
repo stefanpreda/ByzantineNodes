@@ -1,8 +1,6 @@
 package task;
 
-import org.simgrid.msg.Task;
-
-public class TurnOffRequest extends Task {
+public class TurnOffRequest extends SimpleTask {
 
     private String name;
 

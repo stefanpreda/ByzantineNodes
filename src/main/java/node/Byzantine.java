@@ -118,8 +118,8 @@ public class Byzantine extends Process {
         this.put("node_not_exists_again", 4000.0f);
     }};
     private Map<String, Float> trySendingToBaseStationNodes = new HashMap<String, Float>(){{
-        this.put("node_8", 5000.0f);
-        this.put("node_9", 4000.0f);
+        this.put("node_not_exists", 5000.0f);
+        this.put("node_not_exists_again", 4000.0f);
     }};
     private static final int trySendingToBaseStationDelay = 15000;
     private long trySendingToBaseStationLastAttemptTimestamp = -1;
@@ -738,6 +738,17 @@ public class Byzantine extends Process {
                         measurement = differentDataMeasurementNodes.get(Host.currentHost().getName());
                         differentDataMeasurementNodes.remove(Host.currentHost().getName());
                     }
+
+//                    if (differentMessagesAtLeaderApplicationNodes.containsKey(Host.currentHost().getName())) {
+//                        Class differentMessageClass = differentMessagesAtLeaderApplicationNodes.get(Host.currentHost().getName());
+//                        try {
+//                            SimpleTask differentMessage = (SimpleTask)differentMessageClass.getDeclaredConstructor().newInstance();
+//                        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+//                            e.printStackTrace();
+//                        }
+//
+//                        differentMessagesAtLeaderApplicationNodes.remove(Host.currentHost().getName());
+//                    }
 
                     //Flood with measurements
                     for (String destination : ranks.keySet()) {

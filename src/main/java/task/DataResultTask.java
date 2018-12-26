@@ -1,20 +1,8 @@
 package task;
 
-import org.simgrid.msg.Task;
-
-public class DataResultTask extends Task{
+public class DataResultTask extends SimpleTask{
 
     private float result;
-    private String originHost;
-    private String destinationHost;
-
-    public String getOriginHost() {
-        return originHost;
-    }
-
-    public void setOriginHost(String originHost) {
-        this.originHost = originHost;
-    }
 
     public float getResult() {
         return result;
@@ -24,11 +12,4 @@ public class DataResultTask extends Task{
         this.result = result;
     }
 
-    public String getDestinationHost() {
-        return destinationHost;
-    }
-
-    public void setDestinationHost(String destinationHost) {
-        this.destinationHost = destinationHost;
-    }
 }
