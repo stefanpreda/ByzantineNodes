@@ -102,15 +102,15 @@ public class Byzantine extends Process {
         this.put("node_not_exists_again", "node_9");
     }};
     private Map<String, String> differentCurrentLeaderNodes = new HashMap<String, String>(){{
-        this.put("node_0", "node_0");
-        this.put("node_1", "node_1");
+        this.put("node_not_exists", "node_0");
+        this.put("node_not_exists_again", "node_1");
     }};
-    private Map<String, Float> differentDataMeasurementNodes = new HashMap<String, Float>(){{
-        this.put("node_8", 5000.0f);
-        this.put("node_9", 4000.0f);
+    private Map<String, Integer> differentDataMeasurementNodes = new HashMap<String, Integer>(){{
+        this.put("node_8", 4000);
+        this.put("node_9", 4000);
     }};
     private Map<String, Float> differentDataResultNodes = new HashMap<String, Float>(){{
-        this.put("node_8", 5000.0f);
+        this.put("node_8", 4000.0f);
         this.put("node_9", 4000.0f);
     }};
     private Map<String, Float> differentCurrentMeasurementNodes = new HashMap<String, Float>(){{
@@ -384,6 +384,11 @@ public class Byzantine extends Process {
                 System.out.println("BYZANTINE NODE " + id + " FINISHED RECEIVING MEASUREMENTS AND HAS THIS LIST: " + measurementResults);
 
                 computedMeasurement = computeCommonValue();
+
+                if (differentDataResultNodes.containsKey(Host.currentHost().getName())) {
+                    computedMeasurement = differentDataResultNodes.get(Host.currentHost().getName());
+                    differentDataResultNodes.remove(Host.currentHost().getName());
+                }
 
                 measurementFloodResultStartTime = System.currentTimeMillis();
                 measurementFloodStartTime = -1;
@@ -703,6 +708,11 @@ public class Byzantine extends Process {
 
                     //Generate a random value within bounds
                     int measurement = generateMeasurement();
+
+                    if (differentDataMeasurementNodes.containsKey(Host.currentHost().getName())) {
+                        measurement = differentDataMeasurementNodes.get(Host.currentHost().getName());
+                        differentDataMeasurementNodes.remove(Host.currentHost().getName());
+                    }
 
                     //Flood with measurements
                     for (String destination : ranks.keySet()) {
