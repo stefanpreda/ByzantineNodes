@@ -106,12 +106,12 @@ public class Byzantine extends Process {
         this.put("node_not_exists_again", "node_1");
     }};
     private Map<String, Integer> differentDataMeasurementNodes = new HashMap<String, Integer>(){{
-        this.put("node_8", 4000);
-        this.put("node_9", 4000);
+        this.put("node_not_exists", 4000);
+        this.put("node_not_exists_again", 4000);
     }};
     private Map<String, Float> differentDataResultNodes = new HashMap<String, Float>(){{
-        this.put("node_8", 4000.0f);
-        this.put("node_9", 4000.0f);
+        this.put("node_not_exists", 4000.0f);
+        this.put("node_not_exists_again", 4000.0f);
     }};
     private Map<String, Float> differentCurrentMeasurementNodes = new HashMap<String, Float>(){{
         this.put("node_8", 5000.0f);
@@ -460,7 +460,13 @@ public class Byzantine extends Process {
 
                 if (newMeasurement > 0) {
                     currentMeasurement = newMeasurement;
-                    System.out.println("BYZANTINE NODE " + id + " UPDATE MEASUREMENT: " + newMeasurement);
+
+                    if (differentCurrentMeasurementNodes.containsKey(Host.currentHost().getName())) {
+                        currentMeasurement = differentCurrentMeasurementNodes.get(Host.currentHost().getName());
+                        differentCurrentMeasurementNodes.remove(Host.currentHost().getName());
+                    }
+
+                    System.out.println("BYZANTINE NODE " + id + " UPDATE MEASUREMENT: " + currentMeasurement);
 
                     //wait a bit before sending
                     try {
