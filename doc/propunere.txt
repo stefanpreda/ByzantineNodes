@@ -87,3 +87,6 @@ T2AR
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4937011/
 https://www.researchgate.net/publication/305034672_T2AR_trust-aware_ad-hoc_routing_protocol_for_MANET
 http://ijsrcseit.com/paper/CSEIT1722354.pdf
+
+TIMEOUT CRESTE EXPONENTIAL DE FIECARE DATA
+COMPUTED VALUE NU EXACT, CI CU O EROARE
