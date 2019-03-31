@@ -278,8 +278,14 @@ public class BaseStation extends Process {
         HashMap<String, Integer> ranks = new HashMap<>();
         Random generator = new Random();
 
-        for (int i = 0; i < nodeCount; i++)
+        for (int i = 0; i < nodeCount; i++) {
+            if (i == 6) {
+                ranks.put("node_" + i, MAX_RANK);
+                continue;
+            }
+
             ranks.put("node_" + i, generator.nextInt(MAX_RANK));
+        }
 
         return ranks;
     }

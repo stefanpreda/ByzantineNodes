@@ -89,12 +89,12 @@ public class Byzantine extends Process {
     private float currentMeasurement = -1.0f;
 
     //Byzantine Behaviour flags
-    private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
+    private ArrayList<String> ignoreLeaderSelectionNodes =  new ArrayList<>(Arrays.asList("node_7", "node_8", "node_9"));
     private ArrayList<String> ignoreDataMeasurementNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private ArrayList<String> ignoreDataResultNodes =  new ArrayList<>(Arrays.asList("node_not_exists", "node_not_exists_again"));
     private boolean currentLeaderDiesAfterElection = false;
-    private boolean currentLeaderEnrollsAgain = false;
-    private float differentValueSentToBaseStation = 0.0f;
+    private boolean currentLeaderEnrollsAgain = true;
+    private float differentValueSentToBaseStation = 100.0f;
 
     private static boolean leaderSpamsMeasurementTriggers = false;
     private static final int leaderSpamsMeasurementTriggersDelay = 5000;
@@ -631,6 +631,7 @@ public class Byzantine extends Process {
                         if (differentValueSentToBaseStation > 0) {
                             System.out.println("BYZANTINE NODE " + id + " SENDING " + differentValueSentToBaseStation + " TO BASE STATION");
                             finalDataResultTask.setResult(differentValueSentToBaseStation);
+                            currentMeasurement = differentValueSentToBaseStation;
                             differentValueSentToBaseStation = 0.0f;
                         }
                         timeoutSendWithRetries(finalDataResultTask, baseStationHostName);
@@ -705,8 +706,10 @@ public class Byzantine extends Process {
                     }
 
                     //Most likely received from byzantine node
-                    if (!valid)
+                    if (!valid) {
+                        differentValueSentToBaseStation = 0.0f;
                         continue;
+                    }
 
                     //Wait a bit for all nodes to receive the leader selection message
                     try {
@@ -738,8 +741,12 @@ public class Byzantine extends Process {
 
                     //Flood with applications only if not the current leader and did not flood already
                     if (currentLeader == null ||
-                            (!currentLeader.equals(Host.currentHost().getName()) && !leaderApplicationSent)) {
+                            ( (!currentLeader.equals(Host.currentHost().getName()) || currentLeaderEnrollsAgain) && !leaderApplicationSent)) {
                         leaderApplicationSent = true;
+
+                        if (currentLeader != null) {
+                            leaderApplicationSent = true;
+                        }
 
                         if (differentMessagesAtLeaderApplicationNodes.containsKey(Host.currentHost().getName())) {
                             System.out.println("BYZANTINE NODE " + id + " WILL SEND A DIFFERENT MESSAGE TYPE");
